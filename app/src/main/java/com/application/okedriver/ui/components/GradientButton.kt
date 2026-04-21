@@ -6,8 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,25 +16,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.application.okedriver.core.designsystem.theme.OkeCardGradientEnd
-import com.application.okedriver.core.designsystem.theme.OkeCardGradientStart
+import com.application.okedriver.core.designsystem.theme.*
 
 /**
- * Primary gradient CTA button used across the app.
- *
- * @param text      Label to display
- * @param onClick   Click callback
- * @param modifier  Modifier
- * @param isLoading Show loading spinner instead of label
- * @param gradientColors Gradient brush colours (start → end)
- * @param height    Button height (default 56.dp)
- * @param cornerRadius Corner radius in dp (default 16)
+ * Premium modernized gradient CTA button.
+ * Features pill-shape, scale animation, subtle shadow, and Inter typography.
  */
 @Composable
 fun GradientButton(
@@ -44,18 +38,23 @@ fun GradientButton(
     isLoading: Boolean = false,
     gradientColors: List<Color> = listOf(OkeCardGradientStart, OkeCardGradientEnd),
     height: Dp = 56.dp,
-    cornerRadius: Int = 16
+    shape: Shape = OkeShapeButton
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(targetValue = if (isPressed) 0.97f else 1f, label = "btn_scale")
+    val scale by animateFloatAsState(targetValue = if (isPressed) 0.96f else 1f, label = "btn_scale")
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .scale(scale)
-            .clip(RoundedCornerShape(cornerRadius.dp))
+            .shadow(
+                elevation = if (isPressed) 4.dp else 12.dp,
+                shape = shape,
+                spotColor = gradientColors[0].copy(alpha = 0.5f)
+            )
+            .clip(shape)
             .background(brush = Brush.horizontalGradient(gradientColors))
             .clickable(
                 interactionSource = interactionSource,
@@ -68,15 +67,16 @@ fun GradientButton(
         if (isLoading) {
             CircularProgressIndicator(
                 color = Color.White,
-                strokeWidth = 2.dp,
-                modifier = Modifier.size(24.dp)
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(22.dp)
             )
         } else {
             Text(
                 text = text,
                 color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
             )
         }
     }

@@ -1,21 +1,23 @@
 package com.application.okedriver.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.TwoWheeler
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,12 +31,8 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Reusable order history card.
- *
- * Layout:
- *  [Vehicle icon] | [Service + ID + Address] | [Distance]
- *  ──────────────────────────────────────────────────────
- *                                            [Price chip]
+ * Premium modernized order history card.
+ * Features left status bar, refined typography, and clean surface layout.
  */
 @Composable
 fun OrderHistoryCard(
@@ -42,100 +40,159 @@ fun OrderHistoryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val statusColor = if (order.status == com.application.okedriver.ui.model.OrderStatus.FINISHED)
+        OkeSuccess else OkeWarning
+
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .clip(OkeShapeCard)
             .background(OkeSurface)
+            .border(1.dp, OkeCardBorder, OkeShapeCard)
             .clickable { onClick() }
-            .padding(16.dp)
+            .height(IntrinsicSize.Min)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // ── Vehicle icon circle ───────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(OkePrimaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (order.vehicleType == VehicleType.CAR)
-                        Icons.Rounded.DirectionsCar else Icons.Rounded.TwoWheeler,
-                    contentDescription = order.vehicleType.name,
-                    tint = OkePrimary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // ── Middle info ───────────────────────────────────────────────
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${order.serviceType} - ${if (order.vehicleType == VehicleType.CAR) "Car" else "Ride"}",
-                    color = OkeServiceRed,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "ID ${order.date}/#${order.id}",
-                    color = OkeTextSecondary,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${order.pickupAddress} → ${order.dropAddress}",
-                    color = OkeTextSecondary,
-                    fontSize = 11.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp
-                )
-            }
-
-            // ── Distance ──────────────────────────────────────────────────
-            Text(
-                text = "${order.distanceKm}KM",
-                color = OkeTextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        HorizontalDivider(
-            color = OkeDivider,
-            modifier = Modifier.padding(vertical = 10.dp)
+        // ── Left Status Bar ───────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .width(5.dp)
+                .fillMaxHeight()
+                .background(statusColor)
         )
 
-        // ── Price chip (right-aligned) ────────────────────────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .weight(1f)
         ) {
-            Text(
-                text = order.status.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
-                color = if (order.status == com.application.okedriver.ui.model.OrderStatus.FINISHED)
-                    OkeSuccess else OkeWarning,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(OkeOrangeBg)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(OkePrimaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (order.vehicleType == VehicleType.CAR)
+                                Icons.Rounded.DirectionsCar else Icons.Rounded.TwoWheeler,
+                            contentDescription = null,
+                            tint = OkePrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = order.serviceType,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = OkeTextPrimary
+                        )
+                        Text(
+                            text = "#${order.id}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = OkeTextHint,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(OkeShapeChip)
+                        .background(statusColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = order.status.name.lowercase().replaceFirstChar { it.uppercase() },
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Pickup point
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.FiberManualRecord,
+                    contentDescription = null,
+                    tint = OkePrimary,
+                    modifier = Modifier.size(10.dp).padding(top = 4.dp)
+                )
+                Text(
+                    text = order.pickupAddress,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OkeTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Drop point
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.FiberManualRecord,
+                    contentDescription = null,
+                    tint = OkeDanger,
+                    modifier = Modifier.size(10.dp).padding(top = 4.dp)
+                )
+                Text(
+                    text = order.dropAddress,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OkeTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            HorizontalDivider(color = OkeDivider.copy(alpha = 0.6f))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Distance:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OkeTextHint
+                    )
+                    Text(
+                        text = "${order.distanceKm} km",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OkeTextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Text(
                     text = order.price.toRupiah(),
                     color = OkeOrange,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
                 )
             }
         }
@@ -144,16 +201,16 @@ fun OrderHistoryCard(
 
 internal fun Double.toRupiah(): String {
     val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
-    formatter.minimumFractionDigits = 2
-    formatter.maximumFractionDigits = 2
-    return "Rp${formatter.format(this)}"
+    formatter.minimumFractionDigits = 0
+    formatter.maximumFractionDigits = 0
+    return "Rp ${formatter.format(this)}"
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun OrderHistoryCardPreview() {
     OkedriverTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
+        Box(modifier = Modifier.padding(16.dp).background(OkeBg)) {
             OrderHistoryCard(
                 order = OrderHistorySampleData.orders.first(),
                 onClick = {}

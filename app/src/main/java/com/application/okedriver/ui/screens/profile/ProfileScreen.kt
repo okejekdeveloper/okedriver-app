@@ -1,5 +1,6 @@
 package com.application.okedriver.ui.screens.profile
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -27,12 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
 
 /**
- * Driver Profile screen.
- *
- * - Purple gradient header with avatar, name, rating, verified badge
- * - Stats row: Total Trips / Rating / Income
- * - Info card with settings menu items
- * - Logout item (red)
+ * Premium modernized Profile screen.
+ * Features a tall gradient header, floating glassmorphism stats, and refined settings menu.
  */
 @Composable
 fun ProfileScreen(
@@ -45,263 +43,321 @@ fun ProfileScreen(
             .background(OkeBg)
             .verticalScroll(rememberScrollState())
     ) {
-
-        // ── Purple gradient header ────────────────────────────────────────────
+        // ── Premium Taller Header ───────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(280.dp)
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(OkeLoginGradientBottom, OkePrimaryLight)
+                        colors = listOf(OkeLoginGradientTop, OkePrimaryDark)
                     )
                 )
-                .statusBarsPadding()
         ) {
-            // Back button
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
+            // Decorative background circles
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.05f),
+                    radius = 120.dp.toPx(),
+                    center = Offset(size.width * 0.9f, size.height * 0.2f)
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.08f),
+                    radius = 80.dp.toPx(),
+                    center = Offset(size.width * 0.1f, size.height * 0.8f)
                 )
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .statusBarsPadding()
             ) {
-                // Avatar
-                Box(
+                // Top Bar
+                Row(
                     modifier = Modifier
-                        .size(90.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Person,
-                        contentDescription = "Avatar",
-                        tint = Color.White,
-                        modifier = Modifier.size(52.dp)
-                    )
-                }
-
-                Text(
-                    text = "Admin (test)",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-
-                // Verified badge
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CheckCircle,
-                        contentDescription = "Verified",
-                        tint = OkeSuccess,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Verified Driver",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 13.sp
-                    )
-                }
-
-                // ── Star rating row ───────────────────────────────────────
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    repeat(5) { index ->
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f))
+                    ) {
                         Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = if (index < 4) Color(0xFFFFC107) else Color.White.copy(0.4f),
-                            modifier = Modifier.size(18.dp)
+                            Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "4.8",
+                        text = "My Profile",
+                        style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontWeight = FontWeight.Black
                     )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // User Info
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Avatar with gradient border
+                    Box(
+                        modifier = Modifier
+                            .size(110.dp)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color.White.copy(alpha = 0.6f), Color.Transparent)
+                                ),
+                                shape = CircleShape
+                            )
+                            .padding(2.dp) // Border thickness
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(96.dp),
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.25f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Person,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "Ady Driver",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black
+                    )
+
+                    Surface(
+                        color = OkeSuccess.copy(alpha = 0.2f),
+                        shape = OkeShapeChip,
+                        modifier = Modifier.clip(OkeShapeChip)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Verified,
+                                contentDescription = null,
+                                tint = OkeSuccess,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Verified Account",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // ── Stats row ─────────────────────────────────────────────────────────
-        Row(
+        // ── Floating Stats Card ─────────────────────────────────────────
+        Card(
             modifier = Modifier
+                .padding(horizontal = 24.dp)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .offset(y = (-20).dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(OkeSurface)
-                .padding(vertical = 20.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+                .offset(y = (-30).dp),
+            shape = OkeShapeCard,
+            colors = CardDefaults.cardColors(containerColor = OkeDarkSurface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            StatItem(label = "Total Trips", value = "156")
-            VerticalDivider()
-            StatItem(label = "Rating", value = "4.8 ⭐")
-            VerticalDivider()
-            StatItem(label = "Income", value = "Rp 1.2M")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatItem(label = "Trips", value = "156", icon = Icons.Rounded.Route)
+                Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.1f)))
+                StatItem(label = "Rating", value = "4.9", icon = Icons.Rounded.Star)
+                Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.1f)))
+                StatItem(label = "Exp", value = "2.5y", icon = Icons.Rounded.Timer)
+            }
         }
 
-        // ── Settings menu card ────────────────────────────────────────────────
+        // ── Settings Menu ───────────────────────────────────────────────
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-8).dp)
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(OkeSurface)
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val menuItems = listOf(
-                Triple(Icons.Rounded.Person, "Personal Info", false),
-                Triple(Icons.Rounded.DirectionsCar, "Vehicle Info", false),
-                Triple(Icons.Rounded.CreditCard, "Payment Methods", false),
-                Triple(Icons.Rounded.Language, "Language", false),
-                Triple(Icons.AutoMirrored.Rounded.Help, "Help & Support", false)
+            Text(
+                text = "ACCOUNT SETTINGS",
+                style = MaterialTheme.typography.labelSmall,
+                color = OkeTextHint,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(start = 4.dp)
             )
 
-            menuItems.forEachIndexed { index, (icon, label, _) ->
-                ProfileMenuItem(icon = icon, label = label, onClick = {})
-                if (index != menuItems.lastIndex) {
-                    HorizontalDivider(
-                        color = OkeDivider,
-                        modifier = Modifier.padding(start = 56.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = OkeShapeCard,
+                colors = CardDefaults.cardColors(containerColor = OkeSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column {
+                    val settingsItems = listOf(
+                        Triple(Icons.Rounded.Person, "Personal Information", OkePrimary),
+                        Triple(Icons.Rounded.DirectionsCar, "Vehicle Documents", OkeSuccess),
+                        Triple(Icons.Rounded.Security, "Security & Password", OkeWarning),
+                        Triple(Icons.Rounded.Language, "App Language", Color(0xFF64B5F6)),
+                        Triple(Icons.AutoMirrored.Rounded.Help, "Help & Support", Color(0xFFCE93D8))
+                    )
+
+                    settingsItems.forEachIndexed { index, (icon, label, color) ->
+                        ProfileMenuItem(
+                            icon = icon,
+                            label = label,
+                            iconColor = color,
+                            onClick = {}
+                        )
+                        if (index != settingsItems.lastIndex) {
+                            HorizontalDivider(
+                                color = OkeDivider,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Logout Button
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable { onLogoutClick() },
+                color = OkeDanger.copy(alpha = 0.1f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, OkeDanger.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ExitToApp,
+                        contentDescription = null,
+                        tint = OkeDanger,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Sign Out from Application",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = OkeDanger,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // ── Logout ────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(OkeSurface)
-                .clickable { onLogoutClick() }
-                .padding(horizontal = 16.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(OkeDanger.copy(alpha = 0.10f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
-                    contentDescription = "Logout",
-                    tint = OkeDanger,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Text(
-                text = "Logout",
-                color = OkeDanger,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+private fun StatItem(label: String, value: String, icon: ImageVector) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = OkePrimaryLight,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black
+            )
+        }
         Text(
-            text = value,
-            color = OkeTextPrimary,
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.5f),
             fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
-        )
-        Text(
-            text = label,
-            color = OkeTextSecondary,
-            fontSize = 11.sp
+            letterSpacing = 0.5.sp
         )
     }
-}
-
-@Composable
-private fun VerticalDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(36.dp)
-            .background(OkeDivider)
-    )
 }
 
 @Composable
 private fun ProfileMenuItem(
     icon: ImageVector,
     label: String,
+    iconColor: Color,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(OkePrimaryContainer),
+                .size(42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(iconColor.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = OkePrimary,
+                tint = iconColor,
                 modifier = Modifier.size(20.dp)
             )
         }
         Text(
             text = label,
+            style = MaterialTheme.typography.bodyLarge,
             color = OkeTextPrimary,
-            fontWeight = FontWeight.Medium,
-            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f)
         )
         Icon(
             imageVector = Icons.Rounded.ChevronRight,
             contentDescription = null,
             tint = OkeTextHint,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }

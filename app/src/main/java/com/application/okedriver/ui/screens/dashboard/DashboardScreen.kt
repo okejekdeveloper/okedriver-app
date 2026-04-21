@@ -1,11 +1,14 @@
 package com.application.okedriver.ui.screens.dashboard
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -16,24 +19,19 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
-import com.application.okedriver.ui.components.DrawerMenuItem
-import com.application.okedriver.ui.components.DrawerSectionLabel
-import com.application.okedriver.ui.components.OkeDriverMap
-import com.application.okedriver.ui.components.ProfileDrawerHeader
+import com.application.okedriver.ui.components.*
 
 /**
- * Dashboard screen with dark map background + side navigation drawer.
- *
- * - ModalNavigationDrawer wraps the main content
- * - Canvas-drawn fake map (grid roads + purple route)
- * - Floating balance card at top
- * - Bottom info panel with stats
+ * Premium modernized Dashboard Screen.
+ * Featuring glassmorphism overlays, pulsing location indicator, and refined navigation.
  */
 @Composable
 fun DashboardScreen(
@@ -45,30 +43,62 @@ fun DashboardScreen(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var selectedMenuItem by remember { mutableStateOf("History") }
+    var selectedMenuItem by remember { mutableStateOf("Dashboard") }
     var isOnline by remember { mutableStateOf(true) }
+
+    // ── Animations ────────────────────────────────────────────────────────
+    val infiniteTransition = rememberInfiniteTransition(label = "marker_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 2.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse_scale"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse_alpha"
+    )
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                modifier              = Modifier.width(280.dp),
-                drawerContainerColor  = Color.White,
-                drawerContentColor    = OkeTextPrimary
+                modifier              = Modifier.width(300.dp),
+                drawerContainerColor  = OkeSurface,
+                drawerContentColor    = OkeTextPrimary,
+                drawerShape           = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
             ) {
-                // ── Header ────────────────────────────────────────────────
                 ProfileDrawerHeader(
-                    userName   = "Admin (test)",
-                    isVerified = true
+                    userName   = "Ady Driver",
+                    isVerified = true,
+                    isOnline   = isOnline
                 )
 
-                // ── Menu items ────────────────────────────────────────────
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    DrawerSectionLabel("Main Menu")
+                    
+                    DrawerMenuItem(
+                        icon       = Icons.Rounded.Dashboard,
+                        label      = "Dashboard",
+                        isSelected = selectedMenuItem == "Dashboard",
+                        onClick    = {
+                            selectedMenuItem = "Dashboard"
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                     DrawerMenuItem(
                         icon       = Icons.Rounded.History,
                         label      = "History",
@@ -81,32 +111,17 @@ fun DashboardScreen(
                     )
                     DrawerMenuItem(
                         icon       = Icons.Rounded.AccountBalanceWallet,
-                        label      = "Balance",
-                        isSelected = selectedMenuItem == "Balance",
+                        label      = "Wallet",
+                        isSelected = selectedMenuItem == "Wallet",
                         onClick    = {
-                            selectedMenuItem = "Balance"
+                            selectedMenuItem = "Wallet"
                             scope.launch { drawerState.close() }
                             onWalletClick()
                         }
                     )
-                    DrawerMenuItem(
-                        icon       = Icons.Rounded.Campaign,
-                        label      = "Announcements",
-                        isSelected = selectedMenuItem == "Announcements",
-                        onClick    = {
-                            selectedMenuItem = "Announcements"
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                    DrawerMenuItem(
-                        icon       = Icons.Rounded.School,
-                        label      = "Tutorial",
-                        isSelected = selectedMenuItem == "Tutorial",
-                        onClick    = {
-                            selectedMenuItem = "Tutorial"
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    
+                    DrawerSectionLabel("Settings")
+                    
                     DrawerMenuItem(
                         icon       = Icons.Rounded.Person,
                         label      = "Profile",
@@ -119,33 +134,26 @@ fun DashboardScreen(
                     )
                     DrawerMenuItem(
                         icon       = Icons.Rounded.Settings,
-                        label      = "Settings",
-                        isSelected = selectedMenuItem == "Settings",
+                        label      = "Preferences",
+                        isSelected = selectedMenuItem == "Preferences",
                         onClick    = {
-                            selectedMenuItem = "Settings"
+                            selectedMenuItem = "Preferences"
                             scope.launch { drawerState.close() }
                         }
                     )
                     DrawerMenuItem(
                         icon       = Icons.AutoMirrored.Rounded.HelpOutline,
                         label      = "Help & Support",
-                        isSelected = selectedMenuItem == "Help",
-                        onClick    = {
-                            selectedMenuItem = "Help"
-                            scope.launch { drawerState.close() }
-                        }
+                        onClick    = {}
                     )
                 }
 
-                // ── Logout footer ─────────────────────────────────────────
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(16.dp)
                         .navigationBarsPadding()
                 ) {
-                    HorizontalDivider(color = OkeDivider)
-                    Spacer(modifier = Modifier.height(4.dp))
                     DrawerMenuItem(
                         icon      = Icons.AutoMirrored.Rounded.ExitToApp,
                         label     = "Logout",
@@ -155,150 +163,179 @@ fun DashboardScreen(
                             onLogoutClick()
                         }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
     ) {
-
-
-        // ── Main Dashboard Content ────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(OkeDarkBg)
         ) {
-        // ── Google Maps background ─────────────────────────────────────
+            // ── Map Background ────────────────────────────────────────────
             OkeDriverMap(modifier = Modifier.fillMaxSize())
 
-            // ── Status bar area ───────────────────────────────────────────
+            // ── Pulse Indicator (Center) ──────────────────────────────────
+            if (isOnline) {
+                Box(
+                    modifier = Modifier.align(Alignment.Center),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(100.dp)) {
+                        drawCircle(
+                            color = OkePrimary.copy(alpha = pulseAlpha),
+                            radius = (size.minDimension / 4f) * pulseScale
+                        )
+                    }
+                }
+            }
+
+            // ── Floating Header ───────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Hamburger menu — opens the ModalNavigationDrawer
-                Box(
+                // Menu Button
+                Surface(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(OkeDarkSurface.copy(alpha = 0.85f))
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable { scope.launch { drawerState.open() } },
-                    contentAlignment = Alignment.Center
+                    color = OkeDarkSurface.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
-                    Icon(Icons.Rounded.Menu, contentDescription = "Menu", tint = Color.White)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Menu, contentDescription = "Menu", tint = Color.White)
+                    }
                 }
 
-                // Balance pill
-                Box(
+                // Balance Pill
+                Surface(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(OkeDarkSurface.copy(alpha = 0.85f))
-                        .clickable { onWalletClick() }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .clip(OkeShapeChip)
+                        .clickable { onWalletClick() },
+                    color = OkeDarkSurface.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
                     Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             Icons.Rounded.AccountBalanceWallet,
                             contentDescription = null,
                             tint = OkePrimaryLight,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = "Rp 300.000",
                             color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
                 // Avatar
-                Box(
+                Surface(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(OkePrimary)
-                        .clickable { onProfileClick() }
-                    ,
-                    contentAlignment = Alignment.Center
+                        .clickable { onProfileClick() },
+                    color = OkePrimary,
+                    border = BorderStroke(2.dp, Color.White.copy(alpha = 0.3f))
                 ) {
-                    Icon(Icons.Rounded.Person, contentDescription = "Profile", tint = Color.White)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Person, contentDescription = "Profile", tint = Color.White)
+                    }
                 }
             }
 
-            // ── Bottom info panel ─────────────────────────────────────────
+            // ── Premium Floating Bottom Panel ─────────────────────────────
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+//                    .padding(horizontal = 16.dp, vertical = 24.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(OkeDarkSurface)
+                    .clip(OkeShapeSheet)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(OkeDarkSurface.copy(alpha = 0.95f), OkeDarkBg)
+                        )
+                    )
+                    .border(
+                        1.dp, 
+                        Color.White.copy(alpha = 0.12f), 
+                        OkeShapeSheet
+                    )
                     .navigationBarsPadding()
                     .padding(24.dp)
             ) {
-                // Online / Offline toggle
+                // Online Switch Section
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = if (isOnline) "You're Online" else "You're Offline",
+                            style = MaterialTheme.typography.headlineSmall,
                             color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.Black
                         )
                         Text(
-                            text = if (isOnline) "Ready to receive orders" else "Go online to receive orders",
-                            color = Color.White.copy(alpha = 0.55f),
-                            fontSize = 12.sp
+                            text = if (isOnline) "Actively searching for orders" else "Go online to start earning",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.5f)
                         )
                     }
+                    
                     Switch(
                         checked = isOnline,
-                        onCheckedChange = { isOnline = it },
+                        onCheckedChange = { 
+                            isOnline = it
+                            if (it) onIncomingOrderClick()
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = OkePrimary,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color.Gray
-                        )
+                            uncheckedThumbColor = Color.White.copy(alpha = 0.5f),
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier.scale(1.1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                // Stats row
+                // Stats Dashboard
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    DashboardStat(label = "Today's Orders", value = "12")
-                    DashboardStat(label = "Earnings", value = "Rp 85K")
-                    DashboardStat(label = "Rating", value = "4.8 ⭐")
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Incoming order button (demo)
-                Button(
-                    onClick = onIncomingOrderClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = OkePrimary)
-                ) {
-                    Text(
-                        text = "Simulate Incoming Order",
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                    DashboardStatItem(
+                        icon = Icons.Rounded.Route,
+                        label = "Orders",
+                        value = "12",
+                        tint = OkePrimaryLight
+                    )
+                    DashboardStatItem(
+                        icon = Icons.Rounded.Payments,
+                        label = "Earnings",
+                        value = "Rp 85k",
+                        tint = OkeSuccess
+                    )
+                    DashboardStatItem(
+                        icon = Icons.Rounded.Star,
+                        label = "Rating",
+                        value = "4.9",
+                        tint = OkeWarning
                     )
                 }
             }
@@ -307,19 +344,40 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun DashboardStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
-        )
-        Text(
-            text = label,
-            color = Color.White.copy(alpha = 0.50f),
-            fontSize = 11.sp
-        )
+private fun DashboardStatItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    tint: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.05f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.4f),
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.5.sp
+            )
+        }
     }
 }
 

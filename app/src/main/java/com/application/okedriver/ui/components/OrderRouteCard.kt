@@ -1,10 +1,16 @@
 package com.application.okedriver.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -14,8 +20,8 @@ import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
 
 /**
- * Route info card showing pickup → drop-off addresses
- * with colour-coded location dots and a dashed connector line.
+ * Premium route info component for order requests and details.
+ * Features custom markers (Circle → Square) and styled dashed connector.
  */
 @Composable
 fun OrderRouteCard(
@@ -25,66 +31,98 @@ fun OrderRouteCard(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        // Dot + line column
+        // ── Custom Markers & Connector ────────────────────────────────────
         Column(
-            modifier = Modifier.width(16.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            modifier = Modifier.width(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            Canvas(modifier = Modifier.size(12.dp)) {
-                drawCircle(color = OkePickupDot, radius = size.minDimension / 2f)
-            }
-
-            Canvas(
+            // Pickup Marker (Circle)
+            Box(
                 modifier = Modifier
-                    .width(2.dp)
-                    .height(32.dp)
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(OkePrimary.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
             ) {
-                drawLine(
-                    color = Color.Gray.copy(alpha = 0.4f),
-                    start = Offset(size.width / 2f, 0f),
-                    end = Offset(size.width / 2f, size.height),
-                    strokeWidth = 4f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(OkePrimary)
                 )
             }
 
-            Canvas(modifier = Modifier.size(12.dp)) {
-                drawCircle(color = OkeDropoffDot, radius = size.minDimension / 2f)
+            // Connector Line
+            Canvas(
+                modifier = Modifier
+                    .width(1.5.dp)
+                    .height(40.dp)
+            ) {
+                drawLine(
+                    color = OkeTextHint.copy(alpha = 0.4f),
+                    start = Offset(size.width / 2f, 4.dp.toPx()),
+                    end = Offset(size.width / 2f, size.height - 4.dp.toPx()),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 10f))
+                )
+            }
+
+            // Drop-off Marker (Square)
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(OkeDanger.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(OkeDanger)
+                )
             }
         }
 
-        // Address column
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Column {
+        // ── Address Details ───────────────────────────────────────────────
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Pickup",
-                    color = OkeTextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    text = "PICKUP",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OkePrimary,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
                 )
                 Text(
                     text = pickupAddress,
+                    style = MaterialTheme.typography.titleMedium,
                     color = OkeTextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 20.sp
                 )
             }
-            Column {
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Drop-off",
-                    color = OkeTextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    text = "DESTINATION",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OkeDanger,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
                 )
                 Text(
                     text = dropoffAddress,
+                    style = MaterialTheme.typography.titleMedium,
                     color = OkeTextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 20.sp
                 )
             }
         }

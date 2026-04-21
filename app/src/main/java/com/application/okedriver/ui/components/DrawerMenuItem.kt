@@ -3,8 +3,8 @@ package com.application.okedriver.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,10 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
 
 /**
- * Clean light-mode drawer menu item.
- *
- * Selected: OkePrimaryContainer background + OkePrimary icon and text
- * Inactive:  transparent + muted grey text
+ * Modernized drawer menu item with pill-shaped selection, indicator bar, and badge support.
  */
 @Composable
 fun DrawerMenuItem(
@@ -29,9 +26,8 @@ fun DrawerMenuItem(
     label: String,
     isSelected: Boolean = false,
     onClick: () -> Unit,
-    // kept for API compat — ignored in light mode
-    accentColor: Color = OkePrimary,
-    isDanger: Boolean = false
+    isDanger: Boolean = false,
+    badgeCount: Int? = null
 ) {
     val contentColor = when {
         isDanger    -> OkeDanger
@@ -42,46 +38,76 @@ fun DrawerMenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .height(52.dp)
+            .clip(OkeShapeChip)
             .background(
                 when {
-                    isSelected -> OkePrimaryContainer
-                    isDanger   -> OkeDanger.copy(alpha = 0.06f)
+                    isSelected -> OkePrimary.copy(alpha = 0.08f)
+                    isDanger   -> OkeDanger.copy(alpha = 0.04f)
                     else       -> Color.Transparent
                 }
             )
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(end = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left bar indicator for selected state
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight(0.5f)
+                .clip(OkeShapeChip)
+                .background(if (isSelected) OkePrimary else Color.Transparent)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = contentColor,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(22.dp)
         )
+
+        Spacer(modifier = Modifier.width(14.dp))
+
         Text(
             text = label,
             color = contentColor,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
+
+        if (badgeCount != null && badgeCount > 0) {
+            Box(
+                modifier = Modifier
+                    .clip(OkeShapeChip)
+                    .background(OkePrimary)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = badgeCount.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 
 /**
- * Tiny section label — kept for source compat, renders nothing visible in simple mode.
+ * Modernized section label.
  */
 @Composable
 fun DrawerSectionLabel(text: String) {
     Text(
         text = text.uppercase(),
         color = OkeTextHint,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 10.sp,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Black,
         letterSpacing = 1.2.sp,
-        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
     )
 }

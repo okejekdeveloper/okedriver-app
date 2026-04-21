@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.OkePrimary
+import com.application.okedriver.core.designsystem.theme.OkePrimaryDark
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.Brush
 
 /**
  * Animated circular countdown timer for the Incoming Order screen.
@@ -54,12 +56,23 @@ fun CountdownTimer(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 10.dp.toPx()
+            val strokeWidth = 12.dp.toPx()
             val inset = strokeWidth / 2f
             val arcSize = Size(this.size.width - strokeWidth, this.size.height - strokeWidth)
             val topLeft = Offset(inset, inset)
 
-            // Track
+            // Outer Glow (Shadow-like)
+            drawArc(
+                color = progressColor.copy(alpha = 0.15f),
+                startAngle = -90f,
+                sweepAngle = 360f * animatedProgress,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth + 8f, cap = StrokeCap.Round)
+            )
+
+            // Inner Track
             drawArc(
                 color = trackColor,
                 startAngle = -90f,
@@ -69,9 +82,15 @@ fun CountdownTimer(
                 size = arcSize,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
-            // Progress
+
+            // Progress Gradient
             drawArc(
-                color = progressColor,
+                brush = Brush.sweepGradient(
+                    0f to progressColor.copy(alpha = 0.7f),
+                    0.5f to progressColor,
+                    1f to progressColor.copy(alpha = 0.7f),
+                    center = center
+                ),
                 startAngle = -90f,
                 sweepAngle = 360f * animatedProgress,
                 useCenter = false,
@@ -83,10 +102,17 @@ fun CountdownTimer(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "${timeLeft}s",
-                color = Color.White,
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold
+                text = "${timeLeft}",
+                color = OkePrimaryDark,
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = "SEC",
+                color = OkePrimary.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
             )
         }
     }

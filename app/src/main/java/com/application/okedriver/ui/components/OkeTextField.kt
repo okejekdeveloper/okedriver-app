@@ -3,10 +3,10 @@ package com.application.okedriver.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,10 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
 
 /**
- * Branded text field used for form inputs.
- *
- * Supports custom container and text colors for use on both
- * light (Wallet/TopUp) and dark/gradient (Login) backgrounds.
+ * Premium modernized text field with consistent tokens and Inter typography.
  */
 @Composable
 fun OkeTextField(
@@ -51,42 +48,42 @@ fun OkeTextField(
         keyboardOptions = keyboardOptions,
         visualTransformation = visualTransformation,
         cursorBrush = SolidColor(OkePrimary),
-        textStyle = TextStyle(
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
             color = textColor,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Medium
         ),
         modifier = modifier.fillMaxWidth(),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(58.dp)
                     .background(
                         color = containerColor,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = OkeShapeInput
                     )
                     .border(
                         width = 1.dp,
                         color = if (isError) OkeDanger else borderColor,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = OkeShapeInput
                     )
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Icon(
                     imageVector = leadingIcon,
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     if (value.isEmpty()) {
                         Text(
                             text = placeholder,
                             color = hintColor,
-                            fontSize = 15.sp
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                     innerTextField()

@@ -2,12 +2,12 @@ package com.application.okedriver.ui.screens.login
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -31,16 +32,11 @@ import androidx.compose.ui.unit.sp
 import com.application.okedriver.core.designsystem.theme.*
 import com.application.okedriver.ui.components.GradientButton
 import com.application.okedriver.ui.components.OkeTextField
+import kotlin.random.Random
 
 /**
- * Login screen matching the "Oke Driver Login" design from Stitch.
- *
- * - Full-screen purple gradient background
- * - Scooter emoji "illustration"
- * - Email / Password inputs with glass-style containers
- * - Gradient Login CTA button
- * - Google Sign-In outline button
- * - Forgot Password & Create Account links
+ * Premium modernized Login Screen.
+ * Features animated background particles, glassmorphism inputs, and refined typography.
  */
 @Composable
 fun LoginScreen(
@@ -54,89 +50,126 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Subtle floating animation for the scooter icon
-    val infiniteTransition = rememberInfiniteTransition(label = "scooter_anim")
+    // ── Animations ────────────────────────────────────────────────────────
+    val infiniteTransition = rememberInfiniteTransition(label = "login_anims")
+    
+    // Floating logo animation
     val floatAnim by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 8f,
+        targetValue = 12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "scooter_float"
+        label = "logo_float"
+    )
+
+    // Background particle animation state
+    val particleAnim by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(10000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "particles"
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        OkeLoginGradientTop,
-                        OkeLoginGradientMid,
-                        OkeLoginGradientBottom
-                    )
-                )
-            )
+            .background(OkeBg)
     ) {
+        // ── Animated Background Particles ─────────────────────────────────
+        Canvas(modifier = Modifier.fillMaxSize().alpha(0.4f)) {
+            val seed = 42L
+            val random = Random(seed)
+            repeat(15) {
+                val x = random.nextFloat() * size.width
+                val y = (random.nextFloat() * size.height + particleAnim * 200) % size.height
+                val radius = random.nextFloat() * 100f + 50f
+                drawCircle(
+                    color = OkePrimary.copy(alpha = 0.08f),
+                    radius = radius,
+                    center = androidx.compose.ui.geometry.Offset(x, y)
+                )
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-            // ── Scooter illustration ──────────────────────────────────────
+            // ── Premium Logo Section ────────────────────────────────────────
             Box(
                 modifier = Modifier
-                    .size(130.dp)
-                    .scale(1f)
-                    .offset(y = floatAnim.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    .size(140.dp)
+                    .offset(y = floatAnim.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "🛵", fontSize = 68.sp)
+                // Outer Glow
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(OkePrimary.copy(alpha = 0.05f))
+                )
+                // Main circle
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(OkeLoginGradientTop, OkePrimary)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🛵", fontSize = 72.sp)
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "Oke Driver",
-                color = Color.White,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.displayMedium,
+                color = OkePrimary,
+                fontWeight = FontWeight.Black
             )
             Text(
-                text = "Driver app for OkeJek platform",
-                color = Color.White.copy(alpha = 0.70f),
-                fontSize = 13.sp,
+                text = "Premium Driver Experience",
+                style = MaterialTheme.typography.bodyLarge,
+                color = OkeTextSecondary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            // ── Email field ───────────────────────────────────────────────
+            // ── Modern Input Fields ─────────────────────────────────────────
             OkeTextField(
                 value = email,
                 onValueChange = { email = it },
-                placeholder = "Email",
+                placeholder = "Email Address",
                 leadingIcon = Icons.Rounded.Email,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                containerColor = Color.White.copy(alpha = 0.18f),
-                borderColor = Color.White.copy(alpha = 0.30f),
-                textColor = Color.White,
-                hintColor = Color.White.copy(alpha = 0.55f),
-                iconTint = Color.White.copy(alpha = 0.70f)
+                containerColor = OkeInputBg,
+                borderColor = OkeInputBorder,
+                textColor = OkeTextPrimary,
+                hintColor = OkeTextHint,
+                iconTint = OkePrimary
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Password field ────────────────────────────────────────────
             OkeTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -145,27 +178,28 @@ fun LoginScreen(
                 visualTransformation = if (passwordVisible)
                     VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                containerColor = Color.White.copy(alpha = 0.18f),
-                borderColor = Color.White.copy(alpha = 0.30f),
-                textColor = Color.White,
-                hintColor = Color.White.copy(alpha = 0.55f),
-                iconTint = Color.White.copy(alpha = 0.70f),
+                containerColor = OkeInputBg,
+                borderColor = OkeInputBorder,
+                textColor = OkeTextPrimary,
+                hintColor = OkeTextHint,
+                iconTint = OkePrimary,
                 trailingIcon = {
                     Icon(
                         imageVector = if (passwordVisible)
                             Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
                         contentDescription = "Toggle password",
-                        tint = Color.White.copy(alpha = 0.70f),
+                        tint = OkeTextHint,
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(24.dp)
+                            .padding(end = 4.dp)
                             .clickable { passwordVisible = !passwordVisible }
                     )
                 }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // ── Login button ──────────────────────────────────────────────
+            // ── Login Button ──────────────────────────────────────────────
             GradientButton(
                 text = "Login",
                 onClick = {
@@ -174,62 +208,72 @@ fun LoginScreen(
                 },
                 isLoading = isLoading,
                 gradientColors = listOf(
-                    Color(0xFF9B6BFF), OkePrimaryVariant
+                    OkeLoginGradientTop, OkePrimary
                 )
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Google Sign-In button ─────────────────────────────────────
+            // ── Google Sign-In ────────────────────────────────────────────
             OutlinedButton(
                 onClick = onGoogleSignIn,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .height(58.dp),
+                shape = OkeShapeButton,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color.White.copy(alpha = 0.12f)
+                    containerColor = Color.Transparent
                 ),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.40f))
+                border = BorderStroke(1.dp, OkeDivider)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(text = "G", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(text = "Sign in with Google", color = Color.White, fontWeight = FontWeight.Medium)
+                    Icon(
+                        imageVector = Icons.Rounded.Language,
+                        contentDescription = null,
+                        tint = Color(0xFF4285F4), // Google Blue
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Continue with Google",
+                        color = OkeTextPrimary,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // ── Forgot password ───────────────────────────────────────────
+            // ── Links ─────────────────────────────────────────────────────
             Text(
                 text = "Forgot Password?",
-                color = Color.White.copy(alpha = 0.80f),
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyLarge,
+                color = OkePrimary,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onForgotPassword() }
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Create Account ────────────────────────────────────────────
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Don't have an account? ",
-                    color = Color.White.copy(alpha = 0.70f),
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OkeTextSecondary
                 )
                 Text(
-                    text = "Create Account",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "Register Now",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OkePrimary,
+                    fontWeight = FontWeight.Black,
                     modifier = Modifier.clickable { onCreateAccount() }
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }

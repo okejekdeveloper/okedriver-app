@@ -13,23 +13,25 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val OkeLightColorScheme = lightColorScheme(
-    primary          = OkePrimary,
-    onPrimary        = OkeTextOnPrimary,
-    primaryContainer = OkePrimaryContainer,
-    onPrimaryContainer = OkePrimary,
-    secondary        = OkeSecondary,
-    onSecondary      = Color.White,
+    primary            = OkePrimary,
+    onPrimary          = OkeTextOnPrimary,
+    primaryContainer   = OkePrimaryContainer,
+    onPrimaryContainer = OkePrimaryDark,
+    secondary          = OkeSecondary,
+    onSecondary        = Color.White,
     secondaryContainer = OkeSecondaryContainer,
-    background       = OkeBg,
-    onBackground     = OkeTextPrimary,
-    surface          = OkeSurface,
-    onSurface        = OkeTextPrimary,
-    surfaceVariant   = OkeInputBg,
-    onSurfaceVariant = OkeTextSecondary,
-    outline          = OkeInputBorder,
-    error            = OkeDanger,
-    onError          = Color.White
+    background         = OkeBg,
+    onBackground       = OkeTextPrimary,
+    surface            = OkeSurface,
+    onSurface          = OkeTextPrimary,
+    surfaceVariant     = OkeInputBg,
+    onSurfaceVariant   = OkeTextSecondary,
+    outline            = OkeCardBorder,
+    outlineVariant     = OkeInputBorder,
+    error              = OkeDanger,
+    onError            = Color.White
 )
+
 
 private val OkeDarkColorScheme = darkColorScheme(
     primary            = OkePrimaryLight,

@@ -2,7 +2,9 @@ package com.application.okedriver.ui.screens.order
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -111,84 +113,107 @@ fun IncomingOrderScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.95f))
-                    .padding(24.dp),
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color.White.copy(alpha = 0.96f))
+                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
+                    .padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 // Title
-                Text(
-                    text = "Incoming Order Request",
-                    color = OkeTextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "NEW ORDER REQUEST",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OkePrimary,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Incoming Food Delivery",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = OkeTextPrimary,
+                        fontWeight = FontWeight.Black
+                    )
+                }
 
                 // ── Countdown + car ───────────────────────────────────────
-                Box(contentAlignment = Alignment.TopEnd) {
+                Box(contentAlignment = Alignment.Center) {
                     CountdownTimer(
                         totalSeconds = 15,
                         onTimeout = onDecline,
-                        trackColor = OkePrimaryContainer,
+                        size = 160.dp,
+                        trackColor = OkePrimaryContainer.copy(alpha = 0.5f),
                         progressColor = OkePrimary
                     )
-                    Text(
-                        text = "🚗",
-                        fontSize = 36.sp,
-                        modifier = Modifier.offset(x = 28.dp, y = (-8).dp),
-                        color = OkePrimary
-                    )
+                    
+                    // Center Decoration
+//                    Box(
+//                        modifier = Modifier
+//                            .size(80.dp)
+//                            .clip(CircleShape)
+//                            .background(OkePrimary.copy(alpha = 0.05f)),
+//                        contentAlignment = Alignment.Center
+//                    ) {
+//                        Text(
+//                            text = "🍕", // Dynamic based on type? Let's use food/package based on "Food Delivery"
+//                            fontSize = 40.sp
+//                        )
+//                    }
                 }
 
                 // ── Fare + Distance row ───────────────────────────────────
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(OkeBg.copy(alpha = 0.5f))
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OrderInfoChip(label = "Estimated fare", value = "Rp 25.000")
+                    OrderInfoChip(label = "Estimated fare", value = "Rp 25.000", valueColor = OkeSuccess)
                     Box(
                         modifier = Modifier
                             .width(1.dp)
-                            .height(40.dp)
+                            .height(30.dp)
                             .background(OkeDivider)
                     )
-                    OrderInfoChip(label = "Distance", value = "4.2 km")
+                    OrderInfoChip(label = "Distance", value = "4.2 km", valueColor = OkePrimary)
                 }
-
-                HorizontalDivider(color = OkeDivider)
 
                 // ── Route ─────────────────────────────────────────────────
                 OrderRouteCard(
-                    pickupAddress = "Jl. Jend. Sudirman No. 123, Jakarta",
-                    dropoffAddress = "Grand Indonesia, Jakarta"
+                    pickupAddress = "Jl. Jend. Sudirman No. 123",
+                    dropoffAddress = "Grand Indonesia Mall"
                 )
 
                 // ── Action buttons ────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
                         onClick = onDecline,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
+                            .height(56.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = OkeDanger
                         ),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, OkeDanger)
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, OkeDanger.copy(alpha = 0.3f))
                     ) {
-                        Text("Decline", fontWeight = FontWeight.SemiBold)
+                        Text("Decline", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     GradientButton(
-                        text = "Accept",
+                        text = "Accept Order",
                         onClick = onAccept,
-                        modifier = Modifier.weight(1f),
-                        height = 52.dp,
-                        gradientColors = listOf(OkeCardGradientStart, OkeCardGradientEnd)
+                        modifier = Modifier.weight(1.5f),
+                        height = 56.dp,
+                        gradientColors = listOf(Color(0xFF10B981), Color(0xFF059669))
                     )
                 }
             }
@@ -197,18 +222,20 @@ fun IncomingOrderScreen(
 }
 
 @Composable
-private fun OrderInfoChip(label: String, value: String) {
+private fun OrderInfoChip(label: String, value: String, valueColor: Color = OkeTextPrimary) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
-            color = OkeTextPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
+            color = valueColor,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Black
         )
         Text(
-            text = label,
-            color = OkeTextSecondary,
-            fontSize = 11.sp
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = OkeTextHint,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
         )
     }
 }
