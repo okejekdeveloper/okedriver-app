@@ -1,0 +1,210 @@
+{
+  "project_info": {
+    "project_number": "325423649998",
+    "project_id": "newokejek-58ec0",
+    "storage_bucket": "newokejek-58ec0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325423649998:android:b71362bf5a0202408a2c9f",
+        "android_client_info": {
+          "package_name": "id.okejack.merchant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "325423649998-bfqovcnfm9f5fhheavts6mlntkom64fj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.merchant",
+            "certificate_hash": "73ac18f4725e9db4d9eb1654c0618f23f321df42"
+          }
+        },
+        {
+          "client_id": "325423649998-jjicqjemugepgtngq5ci0b897q1odlj1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.merchant",
+            "certificate_hash": "ea6ab1603fe1e6cc77956e320c005e5650aa2fa6"
+          }
+        },
+        {
+          "client_id": "325423649998-qgae1r4isjo0hhl9q8ogkfiaarrau8h3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.merchant",
+            "certificate_hash": "6f51e40950dfa26b99c747d46388b91c03a92dbd"
+          }
+        },
+        {
+          "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4scuCVyQfubh7lKr0dM9V31-H7K00JsI"
+        },
+        {
+          "current_key": "AIzaSyCM0PSgqdgnySCOC3Y9DfMgAH3kmApLkWE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325423649998:android:e6eff94f7b88207d8a2c9f",
+        "android_client_info": {
+          "package_name": "id.okejack.okedriver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "325423649998-lg2qnpq51f9u3soomfknibj05vsr22pm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.okedriver",
+            "certificate_hash": "3eb77033b7491cd9a2512b9a601f8f5deb96f5f8"
+          }
+        },
+        {
+          "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4scuCVyQfubh7lKr0dM9V31-H7K00JsI"
+        },
+        {
+          "current_key": "AIzaSyCM0PSgqdgnySCOC3Y9DfMgAH3kmApLkWE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325423649998:android:f022079ced5ea5d88a2c9f",
+        "android_client_info": {
+          "package_name": "id.okejack.okejackapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "325423649998-43ek2h68be7a4325ktjmpnhqgf8h1gkp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.okejackapp",
+            "certificate_hash": "eb6ae93f4667b7671934a1c5651a187fddf0bf06"
+          }
+        },
+        {
+          "client_id": "325423649998-6d5srsdqr50kddcldij88p6rlkuei4ku.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.okejackapp",
+            "certificate_hash": "052dd974ae1866cdc16f797f66ac7b944758612c"
+          }
+        },
+        {
+          "client_id": "325423649998-f6tb0rbgvfdc1thiieqppboe00c6qh2e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.okejackapp",
+            "certificate_hash": "e8b287816870c8e1da85c3d8f3cff0d87a93311d"
+          }
+        },
+        {
+          "client_id": "325423649998-pjgt18hfit0s7h7v7vemgi3ftsb67sg1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejack.okejackapp",
+            "certificate_hash": "5ae8d62d53323cfbfef348254e8f9603a26ef45a"
+          }
+        },
+        {
+          "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4scuCVyQfubh7lKr0dM9V31-H7K00JsI"
+        },
+        {
+          "current_key": "AIzaSyCM0PSgqdgnySCOC3Y9DfMgAH3kmApLkWE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325423649998:android:2c6306bcd81793b78a2c9f",
+        "android_client_info": {
+          "package_name": "id.okejek.merchant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "325423649998-b4ihbgvtjk4jvec5ph83sknmpg2s0474.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.okejek.merchant",
+            "certificate_hash": "73ac18f4725e9db4d9eb1654c0618f23f321df42"
+          }
+        },
+        {
+          "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4scuCVyQfubh7lKr0dM9V31-H7K00JsI"
+        },
+        {
+          "current_key": "AIzaSyCM0PSgqdgnySCOC3Y9DfMgAH3kmApLkWE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325423649998-5hspunttrp7n6q8j2crh2nt8uhgj6uv1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
