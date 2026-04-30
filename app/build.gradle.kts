@@ -101,7 +101,10 @@ dependencies {
     // Image loading
     implementation(libs.coil.compose)
 
-    // Testing
+
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.osmdroid)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

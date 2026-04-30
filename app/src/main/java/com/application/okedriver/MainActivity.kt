@@ -5,9 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
-import id.okejack.okedriver.app.navigation.OkeDriverNavGraph
-import id.okejack.okedriver.core.designsystem.theme.OkedriverTheme
+import com.application.okedriver.core.designsystem.theme.OkedriverTheme
 import dagger.hilt.android.AndroidEntryPoint
+import id.okejack.okedriver.app.navigation.OkeDriverNavGraph
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
