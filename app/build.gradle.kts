@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,27 +10,66 @@ plugins {
     alias(libs.plugins.firebase.crashlytics)
 }
 
+val localProps = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+fun localProperty(name: String): String? =
+    localProps.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+
+val hasReleaseSigningConfig = listOf(
+    "KEYSTORE_FILE",
+    "KEYSTORE_PASSWORD",
+    "KEY_ALIAS",
+    "KEY_PASSWORD"
+).all { localProperty(it) != null }
+
 android {
     namespace = "id.okejack.okedriver"
     compileSdk = 36
 
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            create("release") {
+                storeFile = file(localProperty("KEYSTORE_FILE")!!)
+                storePassword = localProperty("KEYSTORE_PASSWORD")!!
+                keyAlias = localProperty("KEY_ALIAS")!!
+                keyPassword = localProperty("KEY_PASSWORD")!!
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "id.okejack.okedriver"
-        minSdk = 25
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 23
+        targetSdk = 35
+        versionCode = 4840
+        versionName = "4.8.14"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["googleMapsApiKey"] = localProperty("MAPS_API_KEY") ?: ""
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
+            isShrinkResources = false
+            buildConfigField("String", "GCS_STORAGE_BUCKET", "\"okejackiddev\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            buildConfigField("String", "GCS_STORAGE_BUCKET", "\"okejackiddev\"")
         }
     }
     compileOptions {
