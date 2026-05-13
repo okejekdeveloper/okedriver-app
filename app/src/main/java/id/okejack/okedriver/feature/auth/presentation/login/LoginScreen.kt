@@ -1,5 +1,8 @@
 package id.okejack.okedriver.feature.auth.presentation.login
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,8 +32,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,7 +41,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import id.okejack.okedriver.R
 import id.okejack.okedriver.core.designsystem.component.OkeButton
+import id.okejack.okedriver.core.designsystem.component.OkeOutlinedButton
 import id.okejack.okedriver.feature.auth.domain.model.AuthDriver
 import id.okejack.okedriver.core.designsystem.component.OkeTextField
 
@@ -50,6 +57,33 @@ fun LoginScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val googleSignInClient = remember(context) {
+        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail()
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .build()
+        GoogleSignIn.getClient(context, options)
+    }
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            viewModel.onGoogleLoginFailed(null)
+            return@rememberLauncherForActivityResult
+        }
+
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        runCatching { task.result }
+            .onSuccess { account ->
+                val email = account.email.orEmpty()
+                val idToken = account.idToken.orEmpty()
+                viewModel.loginWithGoogle(email, idToken)
+            }
+            .onFailure { error ->
+                viewModel.onGoogleLoginFailed(error.message)
+            }
+    }
 
     LaunchedEffect(state.loginSuccess) {
         if (state.loginSuccess) onLoginSuccess(state.loggedInDriver)
@@ -153,6 +187,18 @@ fun LoginScreen(
                     viewModel.login()
                 },
                 isLoading = state.isLoading,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OkeOutlinedButton(
+                text = "Masuk dengan Google",
+                onClick = {
+                    focusManager.clearFocus()
+                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                },
+                enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 

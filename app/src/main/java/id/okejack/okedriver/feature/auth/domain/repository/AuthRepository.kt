@@ -7,5 +7,6 @@ interface AuthRepository {
     suspend fun login(email: String, password: String): ApiResponse<AuthDriver>
     suspend fun loginWithGoogle(email: String, idToken: String): ApiResponse<AuthDriver>
     suspend fun isLoggedIn(): Boolean
+    suspend fun registerFcmToken(): ApiResponse<Unit>
     suspend fun logout()
 }

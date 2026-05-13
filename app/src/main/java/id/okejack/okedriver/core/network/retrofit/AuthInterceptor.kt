@@ -1,6 +1,7 @@
 package id.okejack.okedriver.core.network.retrofit
 
 import id.okejack.okedriver.core.datastore.SessionDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -14,7 +15,7 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = runBlocking { sessionDataStore.token.firstOrNull() }
+        val token = runBlocking(Dispatchers.IO) { sessionDataStore.token.firstOrNull() }
 
         val request = chain.request().newBuilder().apply {
             if (!token.isNullOrBlank()) {
@@ -23,6 +24,10 @@ class AuthInterceptor @Inject constructor(
             addHeader("Accept", "application/json")
         }.build()
 
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+        if (response.code == 401) {
+            runBlocking(Dispatchers.IO) { sessionDataStore.clearSession() }
+        }
+        return response
     }
 }

@@ -58,5 +58,14 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun onGoogleLoginFailed(message: String?) {
+        _state.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = message?.takeIf(String::isNotBlank) ?: "Login Google dibatalkan"
+            )
+        }
+    }
+
     fun clearError() = _state.update { it.copy(errorMessage = null) }
 }

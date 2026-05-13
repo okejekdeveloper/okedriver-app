@@ -19,6 +19,16 @@ class LoginUseCase @Inject constructor(
 class LoginWithGoogleUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
-    suspend operator fun invoke(email: String, idToken: String): ApiResponse<AuthDriver> =
-        repository.loginWithGoogle(email, idToken)
+    suspend operator fun invoke(email: String, idToken: String): ApiResponse<AuthDriver> {
+        if (email.isBlank() || idToken.isBlank()) {
+            return ApiResponse.Error(400, "Akun Google tidak valid")
+        }
+        return repository.loginWithGoogle(email.trim(), idToken)
+    }
+}
+
+class RegisterFcmTokenUseCase @Inject constructor(
+    private val repository: AuthRepository
+) {
+    suspend operator fun invoke(): ApiResponse<Unit> = repository.registerFcmToken()
 }

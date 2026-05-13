@@ -21,6 +21,7 @@ lifecycleViewmodelCompose = "2.9.0"
 mapsCompose = "6.5.2"
 playServicesMaps = "19.2.0"
 playServicesLocation = "21.3.0"
+playServicesAuth = "21.2.0"
 firebaseBom = "33.14.0"
 googleServices = "4.4.2"
 firebaseCrashlyticsPlugin = "3.0.3"
@@ -67,6 +68,7 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
