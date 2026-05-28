@@ -1,0 +1,14 @@
+package id.okejack.okedriver.feature.home.domain.model
+
+data class HomeSupportInfo(
+    val motd: String = "",
+    val queueNumber: Int? = null,
+    val queueTerminal: String? = null,
+    val activeOrderId: Long? = null
+) {
+    val hasQueueInfo: Boolean
+        get() = queueNumber != null
+
+    val hasActiveOrder: Boolean
+        get() = activeOrderId != null && activeOrderId > 0
+}
