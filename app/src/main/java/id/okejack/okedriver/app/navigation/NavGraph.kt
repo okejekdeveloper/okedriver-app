@@ -5,7 +5,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +32,9 @@ import id.okejack.okedriver.feature.auth.presentation.init.InitScreen
 import id.okejack.okedriver.feature.auth.presentation.login.LoginScreen
 import id.okejack.okedriver.feature.debug.DebugHomeScreen
 import id.okejack.okedriver.feature.home.presentation.HomeScreen
+import id.okejack.okedriver.ui.screens.history.HistoryScreen
+import id.okejack.okedriver.ui.screens.profile.ProfileScreen
+import id.okejack.okedriver.ui.screens.wallet.WalletScreen
 
 @Composable
 fun OkeDriverNavGraph(
@@ -83,7 +101,45 @@ fun OkeDriverNavGraph(
                             inclusive = true
                         }
                     }
+                },
+                onOpenBalance = { navController.navigateSingleTop(Route.Balance.path) },
+                onOpenHistory = { navController.navigateSingleTop(Route.OrderHistory.path) },
+                onOpenProfile = { navController.navigateSingleTop(Route.Profile.path) },
+                onOpenSettings = { navController.navigateSingleTop(Route.Settings.path) },
+                onOpenNews = { navController.navigateSingleTop(Route.News.path) }
+            )
+        }
+        composable(Route.Balance.path) {
+            WalletScreen(
+                onBackClick = { navController.popBackStack() },
+                onTopUpClick = { navController.navigateSingleTop(Route.TopUp.path) },
+                onWithdrawClick = { navController.navigateSingleTop(Route.Withdraw.path) }
+            )
+        }
+        composable(Route.OrderHistory.path) {
+            HistoryScreen(
+                onBackClick = { navController.popBackStack() },
+                onOrderClick = { id ->
+                    id.toLongOrNull()?.let { orderId ->
+                        navController.navigate("order_detail/$orderId")
+                    }
                 }
+            )
+        }
+        composable(Route.Profile.path) {
+            ProfileScreen(
+                onBackClick = { navController.popBackStack() },
+                onLogoutClick = {
+                    navController.navigate(Route.Login.path) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Route.Settings.path) {
+            PlaceholderScreen(
+                title = "Pengaturan",
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -135,7 +191,12 @@ fun OkeDriverNavGraph(
         composable(Route.ConnectAccount.path) { /* TODO */ }
 
         // --- News (Phase 6) ---
-        composable(Route.News.path) { /* TODO */ }
+        composable(Route.News.path) {
+            PlaceholderScreen(
+                title = "Berita",
+                onBackClick = { navController.popBackStack() }
+            )
+        }
         composable(
             route = Route.NewsDetail.TEMPLATE,
             arguments = listOf(navArgument(Route.NewsDetail.ARG) { type = NavType.IntType })
@@ -144,5 +205,54 @@ fun OkeDriverNavGraph(
         // --- Misc (Phase 6) ---
         composable(Route.Referral.path) { /* TODO */ }
         composable(Route.AirportAttendance.path) { /* TODO */ }
+    }
+}
+
+private fun NavHostController.navigateSingleTop(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaceholderScreen(
+    title: String,
+    onBackClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Kembali"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = "Segera tersedia",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

@@ -20,11 +20,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocationOff
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Newspaper
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -32,13 +37,20 @@ import androidx.compose.material.icons.rounded.ConfirmationNumber
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +58,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,20 +71,29 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import id.okejack.okedriver.core.common.CurrencyFormatter
+import id.okejack.okedriver.core.common.PackageHelper
 import id.okejack.okedriver.core.designsystem.component.OkeButton
 import id.okejack.okedriver.core.designsystem.component.OkeOutlinedButton
 import id.okejack.okedriver.core.service.LocationHelper
 import id.okejack.okedriver.feature.home.domain.model.HomeDriver
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
     onLoggedOut: () -> Unit,
+    onOpenBalance: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenNews: () -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
     var readinessRefreshKey by remember { mutableIntStateOf(0) }
     val hasLocationPermission = remember(readinessRefreshKey, state.driver?.isOnline) {
         LocationHelper.hasForegroundLocationPermission(context)
@@ -185,79 +207,251 @@ fun HomeScreen(
         toggleOnlineStatusWithService()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        HomeHeader(
-            isLoading = state.isLoading || state.isLoadingSupport,
-            onRefresh = {
-                viewModel.refreshDriverInfo()
-                viewModel.refreshSupportInfo()
-            }
-        )
-
-        state.errorMessage?.let { message ->
-            ErrorBanner(message = message)
+    fun closeDrawerAnd(action: () -> Unit) {
+        scope.launch {
+            drawerState.close()
+            action()
         }
+    }
 
-        if (state.isLoading && state.driver == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        } else {
-            val driver = state.driver
-            if (driver != null) {
-                ReadinessCard(
-                    hasLocationPermission = hasLocationPermission,
-                    isLocationEnabled = isLocationEnabled,
-                    hasNotificationPermission = hasNotificationPermission,
-                    onRequestLocationPermission = {
-                        locationPermissionLauncher.launch(locationPermissions())
-                    },
-                    onOpenLocationSettings = {
-                        LocationHelper.openLocationSettings(context)
-                    },
-                    onRequestNotificationPermission = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            HomeDrawerContent(
+                driver = state.driver,
+                onOpenHome = { closeDrawerAnd {} },
+                onOpenBalance = { closeDrawerAnd(onOpenBalance) },
+                onOpenHistory = { closeDrawerAnd(onOpenHistory) },
+                onOpenProfile = { closeDrawerAnd(onOpenProfile) },
+                onOpenSettings = { closeDrawerAnd(onOpenSettings) },
+                onOpenNews = { closeDrawerAnd(onOpenNews) },
+                onLogout = {
+                    closeDrawerAnd {
+                        viewModel.logout(onLoggedOut)
                     }
+                }
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            HomeHeader(
+                isLoading = state.isLoading || state.isLoadingSupport,
+                onMenuClick = {
+                    scope.launch { drawerState.open() }
+                },
+                onRefresh = {
+                    viewModel.refreshDriverInfo()
+                    viewModel.refreshSupportInfo()
+                }
+            )
+
+            state.errorMessage?.let { message ->
+                ErrorBanner(message = message)
+            }
+
+            if (state.isLoading && state.driver == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else {
+                val driver = state.driver
+                if (driver != null) {
+                    if (state.supportInfo.hasAppUpdate(PackageHelper.versionCode(context))) {
+                        AppUpdateCard(
+                            versionName = state.supportInfo.latestVersionName,
+                            onUpdate = { PackageHelper.openPlayStore(context) }
+                        )
+                    }
+                    ReadinessCard(
+                        hasLocationPermission = hasLocationPermission,
+                        isLocationEnabled = isLocationEnabled,
+                        hasNotificationPermission = hasNotificationPermission,
+                        onRequestLocationPermission = {
+                            locationPermissionLauncher.launch(locationPermissions())
+                        },
+                        onOpenLocationSettings = {
+                            LocationHelper.openLocationSettings(context)
+                        },
+                        onRequestNotificationPermission = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    )
+                    if (state.supportInfo.motd.isNotBlank()) {
+                        MotdCard(message = state.supportInfo.motd)
+                    }
+                    if (state.supportInfo.hasActiveOrder) {
+                        ActiveOrderCard(orderId = state.supportInfo.activeOrderId ?: 0)
+                    }
+                    if (state.supportInfo.hasQueueInfo) {
+                        QueueCard(
+                            supportInfo = state.supportInfo,
+                            isRegisteringQueue = state.isRegisteringQueue,
+                            onRegister = { terminal ->
+                                LocationHelper.requestLastKnownLatLng(context) { latLng ->
+                                    viewModel.registerQueue(latLng, terminal)
+                                }
+                            }
+                        )
+                    }
+                    DriverSummaryCard(driver = driver)
+                    StatusCard(
+                        driver = driver,
+                        isTogglingStatus = state.isTogglingStatus,
+                        onToggle = ::requestOnlineToggle
+                    )
+                    VehicleCard(driver = driver)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            OkeOutlinedButton(
+                text = if (state.isLoggingOut) "Keluar..." else "Keluar",
+                onClick = { viewModel.logout(onLoggedOut) },
+                enabled = !state.isLoggingOut
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeDrawerContent(
+    driver: HomeDriver?,
+    onOpenHome: () -> Unit,
+    onOpenBalance: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenNews: () -> Unit,
+    onLogout: () -> Unit
+) {
+    ModalDrawerSheet(
+        modifier = Modifier.fillMaxWidth(0.84f),
+        drawerContainerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = driver?.name?.ifBlank { "Driver" } ?: "Driver",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (driver?.isOnline == true) "Online" else "Offline",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        HorizontalDivider()
+        NavigationDrawerItem(
+            label = { Text("Dashboard") },
+            selected = true,
+            icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null) },
+            onClick = onOpenHome,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Saldo") },
+            selected = false,
+            icon = { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = null) },
+            onClick = onOpenBalance,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Riwayat Order") },
+            selected = false,
+            icon = { Icon(Icons.Rounded.History, contentDescription = null) },
+            onClick = onOpenHistory,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Profil") },
+            selected = false,
+            icon = { Icon(Icons.Rounded.Person, contentDescription = null) },
+            onClick = onOpenProfile,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Berita") },
+            selected = false,
+            icon = { Icon(Icons.Rounded.Newspaper, contentDescription = null) },
+            onClick = onOpenNews,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Pengaturan") },
+            selected = false,
+            icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+            onClick = onOpenSettings,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        NavigationDrawerItem(
+            label = { Text("Keluar") },
+            selected = false,
+            icon = { Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null) },
+            onClick = onLogout,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+}
+
+@Composable
+private fun AppUpdateCard(
+    versionName: String,
+    onUpdate: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Campaign,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp)
                 )
-                if (state.supportInfo.motd.isNotBlank()) {
-                    MotdCard(message = state.supportInfo.motd)
-                }
-                if (state.supportInfo.hasActiveOrder) {
-                    ActiveOrderCard(orderId = state.supportInfo.activeOrderId ?: 0)
-                }
-                if (state.supportInfo.hasQueueInfo) {
-                    QueueCard(supportInfo = state.supportInfo)
-                }
-                DriverSummaryCard(driver = driver)
-                StatusCard(
-                    driver = driver,
-                    isTogglingStatus = state.isTogglingStatus,
-                    onToggle = ::requestOnlineToggle
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Update tersedia",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                VehicleCard(driver = driver)
+                Text(
+                    text = versionName.ifBlank { "Versi terbaru tersedia" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            TextButton(onClick = onUpdate) {
+                Text(text = "Update")
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        OkeOutlinedButton(
-            text = if (state.isLoggingOut) "Keluar..." else "Keluar",
-            onClick = { viewModel.logout(onLoggedOut) },
-            enabled = !state.isLoggingOut
-        )
     }
 }
 
@@ -435,50 +629,107 @@ private fun MotdCard(message: String) {
 }
 
 @Composable
-private fun QueueCard(supportInfo: HomeSupportInfo) {
+private fun QueueCard(
+    supportInfo: HomeSupportInfo,
+    isRegisteringQueue: Boolean,
+    onRegister: (String) -> Unit
+) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.tertiaryContainer
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.ConfirmationNumber,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ConfirmationNumber,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = when (supportInfo.queueNumber) {
+                            null -> "Antrean belum tersedia"
+                            0 -> "Belum masuk antrean"
+                            else -> "Nomor antrean ${supportInfo.queueNumber}"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = supportInfo.queueTerminal?.takeIf { it.isNotBlank() } ?: "Terminal belum dipilih",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (isRegisteringQueue) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = when (supportInfo.queueNumber) {
-                        null -> "Antrean belum tersedia"
-                        0 -> "Belum masuk antrean"
-                        else -> "Nomor antrean ${supportInfo.queueNumber}"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = supportInfo.queueTerminal?.takeIf { it.isNotBlank() } ?: "Terminal belum dipilih",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+            if (supportInfo.queueNumber == 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QueueTerminalButton(
+                        text = "Terminal 1",
+                        enabled = !isRegisteringQueue,
+                        onClick = { onRegister("Terminal 1") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    QueueTerminalButton(
+                        text = "Terminal 2",
+                        enabled = !isRegisteringQueue,
+                        onClick = { onRegister("Terminal 2") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    QueueTerminalButton(
+                        text = "Terminal 3",
+                        enabled = !isRegisteringQueue,
+                        onClick = { onRegister("Terminal 3") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
+private fun QueueTerminalButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+    ) {
+        Text(text = text)
+    }
+}
+
+@Composable
 private fun HomeHeader(
     isLoading: Boolean,
+    onMenuClick: () -> Unit,
     onRefresh: () -> Unit
 ) {
     Row(
@@ -486,18 +737,30 @@ private fun HomeHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(
-                text = "Dashboard",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Status driver dan saldo",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Rounded.Menu,
+                    contentDescription = "Menu"
+                )
+            }
+            Column {
+                Text(
+                    text = "Dashboard",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Status driver dan saldo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         IconButton(
             onClick = onRefresh,

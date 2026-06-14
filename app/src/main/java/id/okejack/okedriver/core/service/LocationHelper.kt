@@ -1,6 +1,7 @@
 package id.okejack.okedriver.core.service
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
+import com.google.android.gms.location.LocationServices
 
 object LocationHelper {
     fun hasForegroundLocationPermission(context: Context): Boolean {
@@ -49,6 +51,30 @@ object LocationHelper {
         context.startActivity(intent)
     }
 
+    @SuppressLint("MissingPermission")
+    fun requestLastKnownLatLng(
+        context: Context,
+        onResult: (String) -> Unit
+    ) {
+        if (!hasForegroundLocationPermission(context)) {
+            onResult(DEFAULT_LAT_LNG)
+            return
+        }
+
+        LocationServices.getFusedLocationProviderClient(context)
+            .lastLocation
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    onResult("${location.latitude},${location.longitude}")
+                } else {
+                    onResult(DEFAULT_LAT_LNG)
+                }
+            }
+            .addOnFailureListener {
+                onResult(DEFAULT_LAT_LNG)
+            }
+    }
+
     fun startOnlineDriverService(context: Context) {
         val intent = Intent(context, OnlineDriverService::class.java).apply {
             action = OnlineDriverService.ACTION_START
@@ -66,4 +92,6 @@ object LocationHelper {
         }
         context.startService(intent)
     }
+
+    private const val DEFAULT_LAT_LNG = "0.0.0.0"
 }

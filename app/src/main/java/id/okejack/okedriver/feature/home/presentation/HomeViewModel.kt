@@ -9,6 +9,7 @@ import id.okejack.okedriver.feature.home.domain.model.HomeDriver
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
 import id.okejack.okedriver.feature.home.domain.usecase.GetDriverInfoUseCase
 import id.okejack.okedriver.feature.home.domain.usecase.GetHomeSupportInfoUseCase
+import id.okejack.okedriver.feature.home.domain.usecase.RegisterQueueUseCase
 import id.okejack.okedriver.feature.home.domain.usecase.ToggleOnlineStatusUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val getDriverInfoUseCase: GetDriverInfoUseCase,
     private val getHomeSupportInfoUseCase: GetHomeSupportInfoUseCase,
+    private val registerQueueUseCase: RegisterQueueUseCase,
     private val toggleOnlineStatusUseCase: ToggleOnlineStatusUseCase,
     private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
@@ -105,6 +107,35 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun registerQueue(latLng: String, terminal: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isRegisteringQueue = true, errorMessage = null) }
+            when (val result = registerQueueUseCase(latLng, terminal)) {
+                is ApiResponse.Success -> {
+                    _state.update {
+                        it.copy(
+                            supportInfo = it.supportInfo.copy(
+                                queueNumber = result.data.queueNumber,
+                                queueTerminal = result.data.queueTerminal
+                            ),
+                            isRegisteringQueue = false,
+                            errorMessage = null
+                        )
+                    }
+                }
+                is ApiResponse.Error -> {
+                    _state.update {
+                        it.copy(
+                            isRegisteringQueue = false,
+                            errorMessage = result.message
+                        )
+                    }
+                }
+                ApiResponse.Loading -> Unit
+            }
+        }
+    }
+
     fun showError(message: String) {
         _state.update { it.copy(errorMessage = message) }
     }
@@ -128,6 +159,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val isLoadingSupport: Boolean = false,
     val isTogglingStatus: Boolean = false,
+    val isRegisteringQueue: Boolean = false,
     val isLoggingOut: Boolean = false,
     val errorMessage: String? = null
 )

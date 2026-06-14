@@ -8,4 +8,5 @@ interface HomeRepository {
     suspend fun getDriverInfo(): ApiResponse<HomeDriver>
     suspend fun toggleOnlineStatus(): ApiResponse<HomeDriver>
     suspend fun getSupportInfo(): ApiResponse<HomeSupportInfo>
+    suspend fun registerQueue(latLng: String, terminal: String): ApiResponse<HomeSupportInfo>
 }

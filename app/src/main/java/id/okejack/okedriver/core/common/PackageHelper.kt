@@ -1,6 +1,8 @@
 package id.okejack.okedriver.core.common
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import id.okejack.okedriver.BuildConfig
 
@@ -30,5 +32,16 @@ object PackageHelper {
         }.getOrElse {
             BuildConfig.VERSION_CODE.toLong()
         }
+    }
+
+    fun openPlayStore(context: Context) {
+        val packageName = context.packageName
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
     }
 }

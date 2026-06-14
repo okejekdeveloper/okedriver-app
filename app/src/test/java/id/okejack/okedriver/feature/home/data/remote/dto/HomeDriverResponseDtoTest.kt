@@ -65,6 +65,17 @@ class HomeDriverResponseDtoTest {
             currentOrder = HomeCurrentOrderResponseDto(
                 success = true,
                 data = HomeCurrentOrderDataDto(order = HomeCurrentOrderDto(id = 99))
+            ),
+            init = HomeInitResponseDto(
+                success = true,
+                data = HomeInitDataDto(
+                    initSettings = HomeInitSettingsDto(
+                        currentAppVersionCode = 5000,
+                        currentAppVersion = "5.0.0",
+                        paymentBiddingRange = listOf(1000, 2000),
+                        distanceBiddingRange = listOf(1, 2)
+                    )
+                )
             )
         )
 
@@ -74,6 +85,10 @@ class HomeDriverResponseDtoTest {
         assertEquals(true, info.hasQueueInfo)
         assertEquals(99L, info.activeOrderId)
         assertEquals(true, info.hasActiveOrder)
+        assertEquals(5000, info.latestVersionCode)
+        assertEquals("5.0.0", info.latestVersionName)
+        assertEquals(true, info.hasAppUpdate(4999))
+        assertEquals(false, info.hasAppUpdate(5000))
     }
 
     @Test
@@ -81,7 +96,8 @@ class HomeDriverResponseDtoTest {
         val info = toHomeSupportInfo(
             motd = HomeMotdResponseDto(success = false, data = HomeMotdDataDto(motd = "hidden")),
             queue = HomeQueueResponseDto(success = true, data = HomeQueueDataDto(queueNumber = 0)),
-            currentOrder = HomeCurrentOrderResponseDto(success = true)
+            currentOrder = HomeCurrentOrderResponseDto(success = true),
+            init = HomeInitResponseDto(success = false)
         )
 
         assertEquals("", info.motd)

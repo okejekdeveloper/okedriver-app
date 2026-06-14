@@ -5,12 +5,14 @@ import id.okejack.okedriver.core.network.model.ApiResponse
 import id.okejack.okedriver.core.network.model.safeApiCall
 import id.okejack.okedriver.feature.auth.data.remote.dto.DriverDto
 import id.okejack.okedriver.feature.home.data.remote.HomeApiService
+import id.okejack.okedriver.feature.home.data.remote.dto.HomeQueueResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeDriverResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.toHomeDriver
 import id.okejack.okedriver.feature.home.data.remote.dto.toHomeSupportInfo
 import id.okejack.okedriver.feature.home.domain.model.HomeDriver
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
 import id.okejack.okedriver.feature.home.domain.repository.HomeRepository
+import com.google.gson.JsonObject
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
@@ -34,18 +36,52 @@ class HomeRepositoryImpl @Inject constructor(
         val motdResult = safeApiCall { api.motd(apiToken) }
         val queueResult = safeApiCall { api.queueNumber(apiToken) }
         val currentOrderResult = safeApiCall { api.currentOrder(apiToken) }
+        val initResult = safeApiCall { api.init() }
         val motd = (motdResult as? ApiResponse.Success)?.data
         val queue = (queueResult as? ApiResponse.Success)?.data
         val currentOrder = (currentOrderResult as? ApiResponse.Success)?.data
+        val init = (initResult as? ApiResponse.Success)?.data
 
-        if (motd == null && queue == null && currentOrder == null) {
+        if (motd == null && queue == null && currentOrder == null && init == null) {
             return (motdResult as? ApiResponse.Error)
                 ?: (queueResult as? ApiResponse.Error)
                 ?: (currentOrderResult as? ApiResponse.Error)
+                ?: (initResult as? ApiResponse.Error)
                 ?: ApiResponse.Error(400, "Gagal memuat info dashboard")
         }
 
-        return ApiResponse.Success(toHomeSupportInfo(motd, queue, currentOrder))
+        return ApiResponse.Success(toHomeSupportInfo(motd, queue, currentOrder, init))
+    }
+
+    override suspend fun registerQueue(
+        latLng: String,
+        terminal: String
+    ): ApiResponse<HomeSupportInfo> {
+        val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
+        if (apiToken.isBlank()) {
+            return ApiResponse.Error(401, "Session tidak valid")
+        }
+
+        val body = JsonObject().apply {
+            addProperty("latlng", latLng)
+            addProperty("terminal", terminal)
+        }
+
+        return when (val result = safeApiCall { api.registerQueue(body, apiToken) }) {
+            is ApiResponse.Success -> mapQueueResponse(result.data)
+            is ApiResponse.Error -> result
+            ApiResponse.Loading -> ApiResponse.Loading
+        }
+    }
+
+    private fun mapQueueResponse(response: HomeQueueResponseDto): ApiResponse<HomeSupportInfo> {
+        if (!response.isSuccessful) {
+            return ApiResponse.Error(
+                400,
+                response.error.ifBlank { response.message.ifBlank { "Gagal masuk antrean" } }
+            )
+        }
+        return ApiResponse.Success(toHomeSupportInfo(null, response, null, null))
     }
 
     private suspend fun callWithSession(
