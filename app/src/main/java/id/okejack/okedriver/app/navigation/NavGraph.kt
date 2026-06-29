@@ -32,14 +32,22 @@ import id.okejack.okedriver.feature.auth.presentation.init.InitScreen
 import id.okejack.okedriver.feature.auth.presentation.login.LoginScreen
 import id.okejack.okedriver.feature.debug.DebugHomeScreen
 import id.okejack.okedriver.feature.home.presentation.HomeScreen
-import id.okejack.okedriver.ui.screens.history.HistoryScreen
-import id.okejack.okedriver.ui.screens.profile.ProfileScreen
-import id.okejack.okedriver.ui.screens.wallet.WalletScreen
+import id.okejack.okedriver.feature.order.presentation.current.CurrentOrderScreen
+import id.okejack.okedriver.feature.order.presentation.detail.OrderDetailScreen
+import id.okejack.okedriver.feature.order.presentation.chat.ChatScreen
+import id.okejack.okedriver.feature.order.presentation.history.OrderHistoryScreen
+import id.okejack.okedriver.feature.order.presentation.incoming.IncomingOrderScreen
+import id.okejack.okedriver.feature.order.presentation.payments.OrderPaymentsScreen
+import id.okejack.okedriver.feature.home.presentation.attendance.AttendanceScreen
+import id.okejack.okedriver.feature.order.presentation.shopping.EditShoppingItemsScreen
+import id.okejack.okedriver.feature.profile.presentation.ProfileScreen
+import id.okejack.okedriver.feature.wallet.presentation.WalletScreen
 
 @Composable
 fun OkeDriverNavGraph(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialIncomingOrderId: Long = 0L
 ) {
     var lastLoggedInDriver by remember { mutableStateOf<AuthDriver?>(null) }
 
@@ -52,7 +60,11 @@ fun OkeDriverNavGraph(
         composable(Route.Init.path) {
             InitScreen(
                 onLoggedIn = {
-                    navController.navigate(Route.Home.path) {
+                    val destination = initialIncomingOrderId
+                        .takeIf { it > 0 }
+                        ?.let { Route.IncomingOrder.create(it) }
+                        ?: Route.Home.path
+                    navController.navigate(destination) {
                         popUpTo(Route.Init.path) { inclusive = true }
                     }
                 },
@@ -66,17 +78,17 @@ fun OkeDriverNavGraph(
         composable(Route.Login.path) {
             LoginScreen(
                 onLoginSuccess = { driver ->
-                    if (BuildConfig.DEBUG) {
-                        lastLoggedInDriver = driver
-                        navController.navigate(Route.DebugHome.path) {
-                            popUpTo(Route.Login.path) { inclusive = true }
-                        }
-                    } else {
+                    // if (BuildConfig.DEBUG) {
+                    //     lastLoggedInDriver = driver
+                    //     navController.navigate(Route.DebugHome.path) {
+                    //         popUpTo(Route.Login.path) { inclusive = true }
+                    //     }
+                    // } else {
                         navController.navigate(Route.Home.path) {
                             popUpTo(Route.Login.path) { inclusive = true }
                         }
-                    }
-                }
+                    // }
+                 }
             )
         }
 
@@ -106,7 +118,11 @@ fun OkeDriverNavGraph(
                 onOpenHistory = { navController.navigateSingleTop(Route.OrderHistory.path) },
                 onOpenProfile = { navController.navigateSingleTop(Route.Profile.path) },
                 onOpenSettings = { navController.navigateSingleTop(Route.Settings.path) },
-                onOpenNews = { navController.navigateSingleTop(Route.News.path) }
+                onOpenNews = { navController.navigateSingleTop(Route.News.path) },
+                onOpenCurrentOrder = { orderId ->
+                    navController.navigateSingleTop(Route.CurrentOrder.create(orderId))
+                },
+                onOpenAttendance = { navController.navigateSingleTop(Route.AirportAttendance.path) }
             )
         }
         composable(Route.Balance.path) {
@@ -117,12 +133,10 @@ fun OkeDriverNavGraph(
             )
         }
         composable(Route.OrderHistory.path) {
-            HistoryScreen(
+            OrderHistoryScreen(
                 onBackClick = { navController.popBackStack() },
-                onOrderClick = { id ->
-                    id.toLongOrNull()?.let { orderId ->
-                        navController.navigate("order_detail/$orderId")
-                    }
+                onOrderClick = { orderId ->
+                    navController.navigateSingleTop(Route.OrderDetail.create(orderId))
                 }
             )
         }
@@ -145,34 +159,83 @@ fun OkeDriverNavGraph(
 
         // --- Order (Phase 3) ---
         composable(
+            route = Route.IncomingOrder.TEMPLATE,
+            arguments = listOf(navArgument(Route.IncomingOrder.ARG) { type = NavType.LongType })
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.IncomingOrder.ARG) ?: 0L
+            IncomingOrderScreen(
+                orderId = orderId,
+                onClose = {
+                    navController.navigate(Route.Home.path) {
+                        popUpTo(Route.IncomingOrder.create(orderId)) { inclusive = true }
+                    }
+                },
+                onAccepted = { acceptedOrderId ->
+                    navController.navigate(Route.CurrentOrder.create(acceptedOrderId)) {
+                        popUpTo(Route.IncomingOrder.create(orderId)) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(
             route = Route.OrderDetail.TEMPLATE,
             arguments = listOf(navArgument(Route.OrderDetail.ARG) { type = NavType.LongType })
-        ) {
-            // TODO: OrderDetailScreen
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.OrderDetail.ARG) ?: 0L
+            OrderDetailScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() },
+                onOpenChat = { id -> navController.navigateSingleTop(Route.Chat.create(id)) },
+                onOpenPayments = { id -> navController.navigateSingleTop(Route.OrderPayments.create(id)) }
+            )
         }
         composable(
             route = Route.CurrentOrder.TEMPLATE,
             arguments = listOf(navArgument(Route.CurrentOrder.ARG) { type = NavType.LongType })
-        ) {
-            // TODO: CurrentOrderScreen
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.CurrentOrder.ARG) ?: 0L
+            CurrentOrderScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() },
+                onOpenChat = { id -> navController.navigateSingleTop(Route.Chat.create(id)) },
+                onOpenEditShopping = { id -> navController.navigateSingleTop(Route.EditShoppingItems.create(id)) },
+                onOpenPayments = { id -> navController.navigateSingleTop(Route.OrderPayments.create(id)) },
+                onOrderFinished = { id ->
+                    navController.navigate(Route.OrderDetail.create(id)) {
+                        popUpTo(Route.CurrentOrder.create(orderId)) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(
             route = Route.Chat.TEMPLATE,
             arguments = listOf(navArgument(Route.Chat.ARG) { type = NavType.LongType })
-        ) {
-            // TODO: ChatScreen
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.Chat.ARG) ?: 0L
+            ChatScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
         composable(
             route = Route.EditShoppingItems.TEMPLATE,
             arguments = listOf(navArgument(Route.EditShoppingItems.ARG) { type = NavType.LongType })
-        ) {
-            // TODO: EditShoppingItemsScreen
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.EditShoppingItems.ARG) ?: 0L
+            EditShoppingItemsScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
         composable(
             route = Route.OrderPayments.TEMPLATE,
             arguments = listOf(navArgument(Route.OrderPayments.ARG) { type = NavType.LongType })
-        ) {
-            // TODO: OrderPaymentsScreen
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong(Route.OrderPayments.ARG) ?: 0L
+            OrderPaymentsScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         // --- Wallet (Phase 4) ---
@@ -204,7 +267,9 @@ fun OkeDriverNavGraph(
 
         // --- Misc (Phase 6) ---
         composable(Route.Referral.path) { /* TODO */ }
-        composable(Route.AirportAttendance.path) { /* TODO */ }
+        composable(Route.AirportAttendance.path) {
+            AttendanceScreen(onBackClick = { navController.popBackStack() })
+        }
     }
 }
 

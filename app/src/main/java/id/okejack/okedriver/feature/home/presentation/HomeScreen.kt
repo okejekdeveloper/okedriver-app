@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocationOff
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.ConfirmationNumber
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ElevatedCard
@@ -57,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -70,14 +74,26 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.common.PackageHelper
 import id.okejack.okedriver.core.designsystem.component.OkeButton
 import id.okejack.okedriver.core.designsystem.component.OkeOutlinedButton
+import id.okejack.okedriver.core.designsystem.theme.OkeWarning
+import id.okejack.okedriver.core.service.DriverLatLng
 import id.okejack.okedriver.core.service.LocationHelper
 import id.okejack.okedriver.feature.home.domain.model.HomeDriver
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
 import kotlinx.coroutines.launch
+
+private const val DRIVER_MAP_ZOOM = 15f
 
 @Composable
 fun HomeScreen(
@@ -87,6 +103,8 @@ fun HomeScreen(
     onOpenProfile: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNews: () -> Unit,
+    onOpenCurrentOrder: (Long) -> Unit,
+    onOpenAttendance: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
@@ -95,6 +113,8 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var readinessRefreshKey by remember { mutableIntStateOf(0) }
+    var mapRefreshKey by remember { mutableIntStateOf(0) }
+    var mapLocation by remember { mutableStateOf<DriverLatLng?>(null) }
     val hasLocationPermission = remember(readinessRefreshKey, state.driver?.isOnline) {
         LocationHelper.hasForegroundLocationPermission(context)
     }
@@ -179,6 +199,21 @@ fun HomeScreen(
             }
             false -> LocationHelper.stopOnlineDriverService(context)
             null -> Unit
+        }
+    }
+
+    LaunchedEffect(
+        readinessRefreshKey,
+        mapRefreshKey,
+        hasLocationPermission,
+        isLocationEnabled
+    ) {
+        if (hasLocationPermission && isLocationEnabled) {
+            LocationHelper.requestLastKnownLocation(context) { location ->
+                mapLocation = location
+            }
+        } else {
+            mapLocation = null
         }
     }
 
@@ -290,16 +325,34 @@ fun HomeScreen(
                             }
                         }
                     )
+                    DriverMapCard(
+                        location = mapLocation,
+                        hasLocationPermission = hasLocationPermission,
+                        isLocationEnabled = isLocationEnabled,
+                        onRefreshLocation = { mapRefreshKey++ },
+                        onRequestLocationPermission = {
+                            locationPermissionLauncher.launch(locationPermissions())
+                        },
+                        onOpenLocationSettings = {
+                            LocationHelper.openLocationSettings(context)
+                        }
+                    )
                     if (state.supportInfo.motd.isNotBlank()) {
                         MotdCard(message = state.supportInfo.motd)
                     }
                     if (state.supportInfo.hasActiveOrder) {
-                        ActiveOrderCard(orderId = state.supportInfo.activeOrderId ?: 0)
+                        ActiveOrderCard(
+                            orderId = state.supportInfo.activeOrderId ?: 0,
+                            onClick = {
+                                state.supportInfo.activeOrderId?.let(onOpenCurrentOrder)
+                            }
+                        )
                     }
                     if (state.supportInfo.hasQueueInfo) {
                         QueueCard(
                             supportInfo = state.supportInfo,
                             isRegisteringQueue = state.isRegisteringQueue,
+                            onOpenAttendance = onOpenAttendance,
                             onRegister = { terminal ->
                                 LocationHelper.requestLastKnownLatLng(context) { latLng ->
                                     viewModel.registerQueue(latLng, terminal)
@@ -548,6 +601,150 @@ private fun ReadinessRow(
     }
 }
 
+@Composable
+private fun DriverMapCard(
+    location: DriverLatLng?,
+    hasLocationPermission: Boolean,
+    isLocationEnabled: Boolean,
+    onRefreshLocation: () -> Unit,
+    onRequestLocationPermission: () -> Unit,
+    onOpenLocationSettings: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Explore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Peta Operasional",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Posisi terakhir driver",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onRefreshLocation) {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Refresh lokasi"
+                    )
+                }
+            }
+
+            when {
+                !hasLocationPermission -> MapPlaceholder(
+                    title = "Izin lokasi belum aktif",
+                    actionText = "Izinkan",
+                    onAction = onRequestLocationPermission
+                )
+                !isLocationEnabled -> MapPlaceholder(
+                    title = "GPS belum aktif",
+                    actionText = "Buka GPS",
+                    onAction = onOpenLocationSettings
+                )
+                location == null -> MapPlaceholder(
+                    title = "Lokasi terakhir belum tersedia",
+                    actionText = "Refresh",
+                    onAction = onRefreshLocation
+                )
+                else -> DriverMap(
+                    latLng = LatLng(location.latitude, location.longitude)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriverMap(latLng: LatLng) {
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(latLng, DRIVER_MAP_ZOOM)
+    }
+
+    LaunchedEffect(latLng) {
+        cameraPositionState.animate(
+            CameraUpdateFactory.newLatLngZoom(latLng, DRIVER_MAP_ZOOM)
+        )
+    }
+
+    GoogleMap(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .clip(RoundedCornerShape(8.dp)),
+        cameraPositionState = cameraPositionState,
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = false,
+            mapToolbarEnabled = false
+        )
+    ) {
+        Marker(
+            state = MarkerState(position = latLng),
+            title = "Posisi driver"
+        )
+    }
+}
+
+@Composable
+private fun MapPlaceholder(
+    title: String,
+    actionText: String,
+    onAction: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.LocationOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(onClick = onAction) {
+                Text(text = actionText)
+            }
+        }
+    }
+}
+
 private fun locationPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -559,9 +756,14 @@ private fun locationPermissions(): Array<String> =
     }
 
 @Composable
-private fun ActiveOrderCard(orderId: Long) {
+private fun ActiveOrderCard(
+    orderId: Long,
+    onClick: () -> Unit
+) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -587,7 +789,7 @@ private fun ActiveOrderCard(orderId: Long) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Detail order akan dimigrasikan di Fase 3",
+                    text = "Ketuk untuk membuka detail order aktif",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -632,6 +834,7 @@ private fun MotdCard(message: String) {
 private fun QueueCard(
     supportInfo: HomeSupportInfo,
     isRegisteringQueue: Boolean,
+    onOpenAttendance: () -> Unit,
     onRegister: (String) -> Unit
 ) {
     ElevatedCard(
@@ -659,16 +862,19 @@ private fun QueueCard(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = when (supportInfo.queueNumber) {
-                            null -> "Antrean belum tersedia"
-                            0 -> "Belum masuk antrean"
-                            else -> "Nomor antrean ${supportInfo.queueNumber}"
+                        text = when {
+                            supportInfo.queueNumber != null && supportInfo.queueNumber > 0 ->
+                                "Nomor antrean ${supportInfo.queueNumber}"
+                            supportInfo.hasAttended -> "Belum masuk antrean"
+                            else -> "Belum absen hari ini"
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = supportInfo.queueTerminal?.takeIf { it.isNotBlank() } ?: "Terminal belum dipilih",
+                        text = supportInfo.queueTerminal?.takeIf { it.isNotBlank() }
+                            ?: if (supportInfo.hasAttended) "Pilih terminal di bawah"
+                               else "Selesaikan absensi untuk masuk antrean",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -681,7 +887,49 @@ private fun QueueCard(
                 }
             }
 
-            if (supportInfo.queueNumber == 0) {
+            // Absen button / badge
+            if (!supportInfo.hasAttended) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = OkeWarning.copy(alpha = 0.10f),
+                    onClick = onOpenAttendance
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = OkeWarning,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Belum absen hari ini",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OkeWarning,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            text = "Absen Sekarang →",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = OkeWarning,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            if (supportInfo.hasAttended && (supportInfo.queueNumber == null || supportInfo.queueNumber == 0)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)

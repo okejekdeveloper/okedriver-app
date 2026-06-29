@@ -15,34 +15,52 @@ sealed class Route(val path: String) {
     data object Settings : Route("settings")
 
     // --- Order ---
+    data class IncomingOrder(val orderId: Long) : Route("incoming_order/{order_id}") {
+        companion object {
+            const val TEMPLATE = "incoming_order/{order_id}"
+            const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "incoming_order/$orderId"
+        }
+    }
     data class OrderDetail(val orderId: Long) : Route("order_detail/{order_id}") {
         companion object {
             const val TEMPLATE = "order_detail/{order_id}"
             const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "order_detail/$orderId"
         }
     }
     data class CurrentOrder(val orderId: Long) : Route("current_order/{order_id}") {
         companion object {
             const val TEMPLATE = "current_order/{order_id}"
             const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "current_order/$orderId"
         }
     }
     data class Chat(val orderId: Long) : Route("chat/{order_id}") {
         companion object {
             const val TEMPLATE = "chat/{order_id}"
             const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "chat/$orderId"
         }
     }
     data class EditShoppingItems(val orderId: Long) : Route("edit_shopping/{order_id}") {
         companion object {
             const val TEMPLATE = "edit_shopping/{order_id}"
             const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "edit_shopping/$orderId"
         }
     }
     data class OrderPayments(val orderId: Long) : Route("order_payments/{order_id}") {
         companion object {
             const val TEMPLATE = "order_payments/{order_id}"
             const val ARG = "order_id"
+
+            fun create(orderId: Long): String = "order_payments/$orderId"
         }
     }
 
