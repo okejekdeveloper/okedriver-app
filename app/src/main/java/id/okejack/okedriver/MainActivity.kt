@@ -13,12 +13,20 @@ import id.okejack.okedriver.app.navigation.OkeDriverNavGraph
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val incomingOrderId = intent?.getLongExtra(EXTRA_INCOMING_ORDER_ID, 0L) ?: 0L
         enableEdgeToEdge()
         setContent {
             OkedriverTheme {
                 val navController = rememberNavController()
-                OkeDriverNavGraph(navController = navController)
+                OkeDriverNavGraph(
+                    navController = navController,
+                    initialIncomingOrderId = incomingOrderId
+                )
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_INCOMING_ORDER_ID = "incoming_order_id"
     }
 }

@@ -77,14 +77,49 @@ data class HomeInitSettingsDto(
     @SerializedName("distance_bidding_range") val distanceBiddingRange: List<Int> = emptyList()
 )
 
+data class HomeAbsenceResponseDto(
+    val success: Boolean = false,
+    val status: Boolean = false,
+    val error: String = "",
+    val message: String = "",
+    val data: HomeAbsenceDataDto = HomeAbsenceDataDto()
+) {
+    val isSuccessful: Boolean get() = success || status
+}
+
+data class HomeAbsenceDataDto(
+    @SerializedName("driver_status") val driverStatus: Boolean = false
+)
+
+data class HomeSubmitStatusResponseDto(
+    val success: Boolean = false,
+    val status: Boolean = false,
+    val error: String = "",
+    val message: String = "",
+    val data: HomeSubmitStatusDataDto = HomeSubmitStatusDataDto()
+) {
+    val isSuccessful: Boolean get() = success || status
+    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal menyimpan absensi" } }
+}
+
+data class HomeSubmitStatusDataDto(
+    @SerializedName("queue_number") val queueNumber: Int? = null,
+    @SerializedName("queue_terminal") val queueTerminal: String? = null,
+    @SerializedName("queue_message") val queueMessage: String = ""
+)
+
 fun toHomeSupportInfo(
     motd: HomeMotdResponseDto?,
     queue: HomeQueueResponseDto?,
     currentOrder: HomeCurrentOrderResponseDto?,
-    init: HomeInitResponseDto?
+    init: HomeInitResponseDto?,
+    absence: HomeAbsenceResponseDto? = null,
+    queueEnabled: Boolean = false
 ): HomeSupportInfo =
     HomeSupportInfo(
         motd = motd?.takeIf { it.isSuccessful }?.data?.motd.orEmpty(),
+        queueEnabled = queueEnabled,
+        hasAttended = absence?.takeIf { it.isSuccessful }?.data?.driverStatus ?: false,
         queueNumber = queue?.takeIf { it.isSuccessful }?.data?.queueNumber,
         queueTerminal = queue?.takeIf { it.isSuccessful }?.data?.queueTerminal,
         activeOrderId = currentOrder

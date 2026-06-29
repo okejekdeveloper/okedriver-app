@@ -11,6 +11,8 @@ import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 
 object LocationHelper {
     fun hasForegroundLocationPermission(context: Context): Boolean {
@@ -56,8 +58,22 @@ object LocationHelper {
         context: Context,
         onResult: (String) -> Unit
     ) {
+        requestLastKnownLocation(context) { location ->
+            if (location != null) {
+                onResult(location.asApiValue())
+            } else {
+                onResult(DEFAULT_LAT_LNG)
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun requestLastKnownLocation(
+        context: Context,
+        onResult: (DriverLatLng?) -> Unit
+    ) {
         if (!hasForegroundLocationPermission(context)) {
-            onResult(DEFAULT_LAT_LNG)
+            onResult(null)
             return
         }
 
@@ -65,13 +81,45 @@ object LocationHelper {
             .lastLocation
             .addOnSuccessListener { location ->
                 if (location != null) {
-                    onResult("${location.latitude},${location.longitude}")
+                    onResult(
+                        DriverLatLng(
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        )
+                    )
                 } else {
-                    onResult(DEFAULT_LAT_LNG)
+                    requestCurrentLocation(context, onResult)
                 }
             }
             .addOnFailureListener {
-                onResult(DEFAULT_LAT_LNG)
+                requestCurrentLocation(context, onResult)
+            }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestCurrentLocation(
+        context: Context,
+        onResult: (DriverLatLng?) -> Unit
+    ) {
+        LocationServices.getFusedLocationProviderClient(context)
+            .getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                CancellationTokenSource().token
+            )
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    onResult(
+                        DriverLatLng(
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        )
+                    )
+                } else {
+                    onResult(null)
+                }
+            }
+            .addOnFailureListener {
+                onResult(null)
             }
     }
 
@@ -94,4 +142,11 @@ object LocationHelper {
     }
 
     private const val DEFAULT_LAT_LNG = "0.0.0.0"
+}
+
+data class DriverLatLng(
+    val latitude: Double,
+    val longitude: Double
+) {
+    fun asApiValue(): String = "$latitude,$longitude"
 }

@@ -17,7 +17,8 @@ data class DriverDto(
     @SerializedName("driver_type") val driverType: Int = 0,
     @SerializedName("balance") val balance: BigDecimal = BigDecimal.ZERO,
     @SerializedName("withdrawable_balance") val withdrawableBalance: BigDecimal = BigDecimal.ZERO,
-    @SerializedName("online") val online: Boolean = false
+    @SerializedName("online") val online: Boolean = false,
+    @SerializedName("enable_driver_queue") val enableDriverQueue: Boolean = false
 )
 
 data class LoginResponseData(

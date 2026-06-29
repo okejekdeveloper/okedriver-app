@@ -1,10 +1,12 @@
 package id.okejack.okedriver.feature.home.data.remote
 
+import id.okejack.okedriver.feature.home.data.remote.dto.HomeAbsenceResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeDriverResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeCurrentOrderResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeInitResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeMotdResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeQueueResponseDto
+import id.okejack.okedriver.feature.home.data.remote.dto.HomeSubmitStatusResponseDto
 import com.google.gson.JsonObject
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -35,4 +37,10 @@ interface HomeApiService {
 
     @GET("order/current-order")
     suspend fun currentOrder(@Query("api_token") apiToken: String): HomeCurrentOrderResponseDto
+
+    @GET("driver/check-absence-status")
+    suspend fun checkAbsenceStatus(@Query("api_token") apiToken: String): HomeAbsenceResponseDto
+
+    @POST("driver/submit-status")
+    suspend fun submitStatus(@Query("api_token") apiToken: String): HomeSubmitStatusResponseDto
 }

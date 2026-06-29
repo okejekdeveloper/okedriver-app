@@ -9,4 +9,6 @@ interface HomeRepository {
     suspend fun toggleOnlineStatus(): ApiResponse<HomeDriver>
     suspend fun getSupportInfo(): ApiResponse<HomeSupportInfo>
     suspend fun registerQueue(latLng: String, terminal: String): ApiResponse<HomeSupportInfo>
+    suspend fun checkAttendance(): ApiResponse<Boolean>
+    suspend fun submitAttendance(): ApiResponse<Unit>
 }

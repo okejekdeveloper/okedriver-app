@@ -34,23 +34,35 @@ class HomeRepositoryImpl @Inject constructor(
         }
 
         val motdResult = safeApiCall { api.motd(apiToken) }
-        val queueResult = safeApiCall { api.queueNumber(apiToken) }
+        val driverResult = safeApiCall { api.driverInfo(apiToken) }
         val currentOrderResult = safeApiCall { api.currentOrder(apiToken) }
         val initResult = safeApiCall { api.init() }
         val motd = (motdResult as? ApiResponse.Success)?.data
-        val queue = (queueResult as? ApiResponse.Success)?.data
+        val driverResponse = (driverResult as? ApiResponse.Success)?.data
         val currentOrder = (currentOrderResult as? ApiResponse.Success)?.data
         val init = (initResult as? ApiResponse.Success)?.data
 
-        if (motd == null && queue == null && currentOrder == null && init == null) {
+        val queueEnabled = driverResponse
+            ?.takeIf { it.isSuccessful }
+            ?.data?.driver?.enableDriverQueue
+            ?: false
+
+        val queueResult = if (queueEnabled) safeApiCall { api.queueNumber(apiToken) } else null
+        val absenceResult = if (queueEnabled) safeApiCall { api.checkAbsenceStatus(apiToken) } else null
+        val queue = (queueResult as? ApiResponse.Success)?.data
+        val absence = (absenceResult as? ApiResponse.Success)?.data
+
+        if (motd == null && driverResponse == null && currentOrder == null && init == null) {
             return (motdResult as? ApiResponse.Error)
-                ?: (queueResult as? ApiResponse.Error)
+                ?: (driverResult as? ApiResponse.Error)
                 ?: (currentOrderResult as? ApiResponse.Error)
                 ?: (initResult as? ApiResponse.Error)
                 ?: ApiResponse.Error(400, "Gagal memuat info dashboard")
         }
 
-        return ApiResponse.Success(toHomeSupportInfo(motd, queue, currentOrder, init))
+        return ApiResponse.Success(
+            toHomeSupportInfo(motd, queue, currentOrder, init, absence, queueEnabled)
+        )
     }
 
     override suspend fun registerQueue(
@@ -74,6 +86,33 @@ class HomeRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun checkAttendance(): ApiResponse<Boolean> {
+        val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
+        if (apiToken.isBlank()) return ApiResponse.Error(401, "Session tidak valid")
+        return when (val result = safeApiCall { api.checkAbsenceStatus(apiToken) }) {
+            is ApiResponse.Success -> {
+                val attended = result.data.isSuccessful && result.data.data.driverStatus
+                ApiResponse.Success(attended)
+            }
+            is ApiResponse.Error -> result
+            ApiResponse.Loading -> ApiResponse.Loading
+        }
+    }
+
+    override suspend fun submitAttendance(): ApiResponse<Unit> {
+        val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
+        if (apiToken.isBlank()) return ApiResponse.Error(401, "Session tidak valid")
+        return when (val result = safeApiCall { api.submitStatus(apiToken) }) {
+            is ApiResponse.Success -> {
+                val dto = result.data
+                if (dto.isSuccessful) ApiResponse.Success(Unit)
+                else ApiResponse.Error(400, dto.errorMessage)
+            }
+            is ApiResponse.Error -> result
+            ApiResponse.Loading -> ApiResponse.Loading
+        }
+    }
+
     private fun mapQueueResponse(response: HomeQueueResponseDto): ApiResponse<HomeSupportInfo> {
         if (!response.isSuccessful) {
             return ApiResponse.Error(
@@ -81,7 +120,7 @@ class HomeRepositoryImpl @Inject constructor(
                 response.error.ifBlank { response.message.ifBlank { "Gagal masuk antrean" } }
             )
         }
-        return ApiResponse.Success(toHomeSupportInfo(null, response, null, null))
+        return ApiResponse.Success(toHomeSupportInfo(null, response, null, null, queueEnabled = true))
     }
 
     private suspend fun callWithSession(
