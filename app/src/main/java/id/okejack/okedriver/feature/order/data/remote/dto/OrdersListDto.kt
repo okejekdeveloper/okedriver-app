@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.order.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.order.domain.model.DriverOrder
 
@@ -11,7 +13,7 @@ data class OrdersListResponseDto(
     val data: OrdersListDataDto? = null
 ) {
     val isSuccessful: Boolean get() = success || status
-    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal memuat riwayat order" } }
+    val errorMessage: String get() = ServerErrors.message(error, message, "Gagal memuat riwayat order")
 }
 
 data class OrdersListDataDto(
@@ -21,4 +23,4 @@ data class OrdersListDataDto(
 
 fun OrdersListResponseDto.toOrderList(): List<DriverOrder> =
     (data?.orders.orEmpty() + data?.inProgress.orEmpty())
-        .map { it.toDomain() }
+        .map { it.toDomain() }.distinctBy { it.id }

@@ -35,6 +35,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshDriverInfo() {
+        if (_state.value.isLoading || _state.value.isTogglingStatus || _state.value.isLoggingOut) return
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = getDriverInfoUseCase()) {
@@ -61,6 +63,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshSupportInfo() {
+        if (_state.value.isLoadingSupport || _state.value.isLoggingOut) return
+        _state.update { it.copy(isLoadingSupport = true) }
         viewModelScope.launch {
             _state.update { it.copy(isLoadingSupport = true) }
             when (val result = getHomeSupportInfoUseCase()) {
@@ -81,13 +85,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun toggleOnlineStatus(onStatusChanged: (Boolean) -> Unit = {}) {
+        if (_state.value.isTogglingStatus || _state.value.isLoading || _state.value.isLoggingOut) return
+        _state.update { it.copy(isTogglingStatus = true, errorMessage = null) }
         viewModelScope.launch {
             _state.update { it.copy(isTogglingStatus = true, errorMessage = null) }
             when (val result = toggleOnlineStatusUseCase()) {
                 is ApiResponse.Success -> {
+                    // Hanya driver/info yang mengirim enable_*; dari toggle-status cukup ambil status online.
                     _state.update {
                         it.copy(
-                            driver = result.data,
+                            driver = it.driver?.copy(isOnline = result.data.isOnline) ?: result.data,
                             isTogglingStatus = false,
                             errorMessage = null
                         )
@@ -108,6 +115,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun registerQueue(latLng: String, terminal: String) {
+        if (_state.value.isRegisteringQueue) return
+        val coordinate = latLng.split(",").map { it.trim().toDoubleOrNull() }
+        if (coordinate.size != 2 || coordinate[0] == null || coordinate[1] == null ||
+            coordinate[0]!! !in -90.0..90.0 || coordinate[1]!! !in -180.0..180.0 ||
+            (coordinate[0] == 0.0 && coordinate[1] == 0.0)
+        ) {
+            showError("Lokasi GPS belum tersedia. Tunggu lokasi terbaru dan coba lagi.")
+            return
+        }
+        _state.update { it.copy(isRegisteringQueue = true, errorMessage = null) }
         viewModelScope.launch {
             _state.update { it.copy(isRegisteringQueue = true, errorMessage = null) }
             when (val result = registerQueueUseCase(latLng, terminal)) {
@@ -116,7 +133,9 @@ class HomeViewModel @Inject constructor(
                         it.copy(
                             supportInfo = it.supportInfo.copy(
                                 queueNumber = result.data.queueNumber,
-                                queueTerminal = result.data.queueTerminal
+                                queueTerminal = result.data.queueTerminal,
+                                queueTerminalTotal = result.data.queueTerminalTotal,
+                                queueMessage = result.data.queueMessage
                             ),
                             isRegisteringQueue = false,
                             errorMessage = null

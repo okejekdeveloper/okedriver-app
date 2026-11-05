@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="action_deny">Deny</string>
+<string name="location_tracking_warning">Oke Driver accesses your location (GPS) while the app is open to show your position on the map.\n\nWhile your status is \'Online\', Oke Driver collects and sends your location to our servers, including when the app is closed or not in use, to match you with nearby orders and monitor order progress.\n\nDuring an order, your location is shared with the customer to track their delivery or trip.\n\nWhile your status is \'Offline\', your location is not sent to our servers, except when you check in for attendance or register for a queue to verify your location.\n\nOnline tracking stops when you select Offline. By tapping \'Agree\', you consent to this use of location data.</string>
+<string name="location_tracking_warning_title">Location Data Collection</string>
+<string name="action_agree">Agree</string>
+<string name="background_location_disclosure_title">Location when the app is closed</string>
+<string name="background_location_disclosure">So that your \'Online\' status resumes automatically after your device restarts, Oke Driver needs to access your location all the time (\"Allow all the time\"), including when the app is closed or not in use.\n\nYour location is sent to our servers only while your status is \'Online\', to match you with nearby orders and monitor order progress. While \'Offline\', your location is not sent.\n\nThis permission is optional. Without it you can still go Online, but you must open the app manually after your device restarts. You can revoke it at any time in your device settings.\n\nAfter you tap \'Agree\', you will be taken to choose the location permission.</string>
+</resources>

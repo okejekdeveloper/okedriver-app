@@ -30,5 +30,6 @@ class LoginWithGoogleUseCase @Inject constructor(
 class RegisterFcmTokenUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
-    suspend operator fun invoke(): ApiResponse<Unit> = repository.registerFcmToken()
+    suspend operator fun invoke(token: String? = null): ApiResponse<Unit> =
+        repository.registerFcmToken(token)
 }

@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.auth.data.repository
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import id.okejack.okedriver.core.datastore.SessionDataStore
 import id.okejack.okedriver.core.network.api.FcmApiService
 import id.okejack.okedriver.core.network.model.ApiResponse
@@ -14,18 +16,24 @@ import id.okejack.okedriver.feature.auth.domain.model.AuthDriver
 import id.okejack.okedriver.feature.auth.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import id.okejack.okedriver.core.service.LocationHelper
+import kotlinx.coroutines.CancellationException
+import id.okejack.okedriver.core.service.FcmRegistrationWorker
 
 class AuthRepositoryImpl @Inject constructor(
     private val api: AuthApiService,
     private val fcmApi: FcmApiService,
     private val firebaseTokenProvider: FirebaseTokenProvider,
-    private val sessionDataStore: SessionDataStore
+    private val sessionDataStore: SessionDataStore,
+    @ApplicationContext private val context: Context
 ) : AuthRepository {
 
     override suspend fun login(email: String, password: String): ApiResponse<AuthDriver> {
         return try {
             val response = api.login(LoginRequest(email, password))
-            if (response.success) {
+            if (response.success && response.data.sessionId.isNotBlank() && response.data.driver.id > 0) {
                 val driver = response.data.driver
                 val token = response.data.sessionId
                 sessionDataStore.saveSession(
@@ -37,11 +45,13 @@ class AuthRepositoryImpl @Inject constructor(
                     driverPhoto = driver.imageUrl
                 )
                 cacheDriverProfile(driver)
-                registerFcmToken()
+                FcmRegistrationWorker.enqueue(context, token)
                 ApiResponse.Success(driver.toDomain(token))
             } else {
-                ApiResponse.Error(400, response.error.ifBlank { response.message })
+                ApiResponse.Error(400, ServerErrors.message(response.error, response.message), errorCode = response.error)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             ApiResponse.Error(500, e.message ?: "Koneksi gagal")
         }
@@ -50,7 +60,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun loginWithGoogle(email: String, idToken: String): ApiResponse<AuthDriver> {
         return try {
             val response = api.loginWithGoogle(GoogleLoginRequest(email, idToken))
-            if (response.success) {
+            if (response.success && response.data.sessionId.isNotBlank() && response.data.driver.id > 0) {
                 val driver = response.data.driver
                 val token = response.data.sessionId
                 sessionDataStore.saveSession(
@@ -62,11 +72,13 @@ class AuthRepositoryImpl @Inject constructor(
                     driverPhoto = driver.imageUrl
                 )
                 cacheDriverProfile(driver)
-                registerFcmToken()
+                FcmRegistrationWorker.enqueue(context, token)
                 ApiResponse.Success(driver.toDomain(token))
             } else {
-                ApiResponse.Error(400, response.error.ifBlank { response.message })
+                ApiResponse.Error(400, ServerErrors.message(response.error, response.message), errorCode = response.error)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             ApiResponse.Error(500, e.message ?: "Koneksi gagal")
         }
@@ -77,7 +89,7 @@ class AuthRepositoryImpl @Inject constructor(
         return !token.isNullOrBlank()
     }
 
-    override suspend fun registerFcmToken(): ApiResponse<Unit> {
+    override suspend fun registerFcmToken(token: String?): ApiResponse<Unit> {
         val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
         val driverId = sessionDataStore.driverId.firstOrNull() ?: 0
         if (apiToken.isBlank() || driverId == 0) {
@@ -85,7 +97,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
         return when (val result = safeApiCall {
-            val fcmToken = firebaseTokenProvider.getToken()
+            val fcmToken = token?.takeIf(String::isNotBlank) ?: firebaseTokenProvider.getToken()
             sessionDataStore.saveFcmToken(fcmToken)
             val request = FcmTokenRequest(
                 token = fcmToken,
@@ -95,7 +107,7 @@ class AuthRepositoryImpl @Inject constructor(
             fcmApi.registerFcmToken(request.toJsonObject(), apiToken)
         }) {
             is ApiResponse.Success -> {
-                if (result.data.status) {
+                if (result.data.isSuccessful) {
                     ApiResponse.Success(Unit)
                 } else {
                     ApiResponse.Error(400, result.data.message.ifBlank { "Gagal register FCM" })
@@ -107,6 +119,8 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        FcmRegistrationWorker.cancel(context)
+        LocationHelper.stopOnlineDriverService(context)
         val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
         val driverId = sessionDataStore.driverId.firstOrNull() ?: 0
         val fcmToken = sessionDataStore.fcmToken.firstOrNull().orEmpty()

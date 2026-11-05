@@ -9,5 +9,5 @@ data class LoginRequest(
 
 data class GoogleLoginRequest(
     val email: String,
-    @SerializedName("id_token") val idToken: String
+    @SerializedName("token_id") val idToken: String
 )

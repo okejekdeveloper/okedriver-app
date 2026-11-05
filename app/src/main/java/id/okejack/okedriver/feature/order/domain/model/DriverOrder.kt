@@ -25,7 +25,18 @@ data class DriverOrder(
     val driverInfo: String,
     val courier: CourierInfo?,
     val items: List<OrderLineItem>,
-    val shoppingEditedAt: String
+    val shoppingEditedAt: String,
+    val paymentProvider: String = "",
+    val paymentStatus: Int = 0,
+    val expressFee: BigDecimal = BigDecimal.ZERO,
+    val originalTotalShopping: BigDecimal = BigDecimal.ZERO,
+    val encodedRoute: String = "",
+    val customerScore: CustomerScore? = null,
+    val cancellation: OrderCancellation? = null,
+    val merchant: OrderMerchant? = null,
+    val packageInfo: OrderPackageInfo? = null,
+    val additionalPayments: List<OrderCharge> = emptyList(),
+    val expressVerificationCode: String = ""
 ) {
     val serviceLabel: String
         get() = when (type) {
@@ -75,11 +86,19 @@ data class DriverOrder(
             destinationLatLng
         }
 
+    val totalFee: BigDecimal
+        get() = (if (totalDiscount > BigDecimal.ZERO) fee else originalFee)
+            .add(if (type == TYPE_EXPRESS) expressFee else BigDecimal.ZERO)
+            .coerceAtLeast(BigDecimal.ZERO)
+
     val totalPaid: BigDecimal
-        get() = fee.add(totalShopping).add(serviceFee).coerceAtLeast(BigDecimal.ZERO)
+        get() = totalFee.add(totalShopping).coerceAtLeast(BigDecimal.ZERO)
 
     val canCancel: Boolean
-        get() = status == STATUS_PENDING || status == STATUS_ASSIGNED
+        get() = status == STATUS_PENDING
+
+    val canEditShopping: Boolean
+        get() = status in listOf(STATUS_PENDING, STATUS_ASSIGNED, STATUS_DEPARTED) && shoppingEditedAt.isBlank()
 
     val canUpdateStatus: Boolean
         get() = status == STATUS_PENDING || status == STATUS_ASSIGNED || status == STATUS_DEPARTED
@@ -87,7 +106,14 @@ data class DriverOrder(
     val nextActionLabel: String
         get() = if (status == STATUS_DEPARTED) "Selesaikan" else "Mulai"
 
+    val requiresQrisPayment: Boolean
+        get() = status == STATUS_DEPARTED && paymentProvider == "qris" && paymentStatus != PAYMENT_SUCCESS
+
+    val isQrisPaidInTransit: Boolean
+        get() = status == STATUS_DEPARTED && paymentProvider == "qris" && paymentStatus == PAYMENT_SUCCESS
+
     companion object {
+        const val PAYMENT_SUCCESS = 2
         const val TYPE_RIDE = 0
         const val TYPE_DELIVERY = 1
         const val TYPE_SHOPPING = 2
@@ -109,15 +135,32 @@ data class DriverOrder(
 
         const val CANCEL_REASON_NO_CONTACT = 100
         const val CANCEL_REASON_REJECTED = 98
+        const val CANCEL_REASON_IGNORED = 99
+        const val CANCEL_REASON_SHOP_CLOSED = 101
+        const val CANCEL_REASON_CUSTOMER_CANCEL = 102
+        const val CANCEL_REASON_LOCATION_UNREACHABLE = 103
+
+        val currentOrderCancelReasons: List<CancelReasonOption> = listOf(
+            CancelReasonOption("Customer tidak dapat dihubungi", CANCEL_REASON_NO_CONTACT),
+            CancelReasonOption("Toko tutup", CANCEL_REASON_SHOP_CLOSED),
+            CancelReasonOption("Customer membatalkan", CANCEL_REASON_CUSTOMER_CANCEL),
+            CancelReasonOption("Lokasi tidak dapat dijangkau", CANCEL_REASON_LOCATION_UNREACHABLE)
+        )
     }
 }
+
+data class CancelReasonOption(
+    val label: String,
+    val code: Int
+)
 
 data class OrderLineItem(
     val id: Long,
     val name: String,
     val detail: String,
     val quantity: Int,
-    val price: BigDecimal
+    val price: BigDecimal,
+    val type: Int = EditableItem.TYPE_ITEM
 ) {
     val total: BigDecimal
         get() = price.multiply(BigDecimal(quantity))
@@ -131,6 +174,12 @@ data class CourierInfo(
     val recipientPhone: String
 )
 
+data class CustomerScore(val score: Int, val review: String)
+data class OrderCancellation(val actor: Int, val reason: String, val cancelledAt: String)
+data class OrderMerchant(val name: String, val address: String, val phone: String)
+data class OrderPackageInfo(val name: String, val description: String, val duration: Int, val overtime: Int, val overtimeFee: BigDecimal)
+data class OrderCharge(val title: String, val detail: String, val fee: BigDecimal)
+
 fun BigDecimal.coerceAtLeast(minimumValue: BigDecimal): BigDecimal =
     if (this < minimumValue) minimumValue else this
 
@@ -143,13 +192,14 @@ data class EditableItem(
     val type: Int = TYPE_ITEM
 ) {
     val total: BigDecimal get() = price.multiply(BigDecimal(quantity))
-    val isFeeType: Boolean get() = type == TYPE_PAYMENT
+    val isFeeType: Boolean get() = type == TYPE_PAYMENT || type == TYPE_PARKING
 
     companion object {
         const val TYPE_ITEM = 0
         const val TYPE_PAYMENT = 1
+        const val TYPE_PARKING = 2
     }
 }
 
 fun OrderLineItem.toEditable(): EditableItem =
-    EditableItem(id = id, name = name, detail = detail, quantity = quantity, price = price)
+    EditableItem(id = id, name = name, detail = detail, quantity = quantity, price = price, type = type)

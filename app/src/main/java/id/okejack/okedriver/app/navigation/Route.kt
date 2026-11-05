@@ -63,16 +63,21 @@ sealed class Route(val path: String) {
             fun create(orderId: Long): String = "order_payments/$orderId"
         }
     }
+    data object RecentOrderLocations : Route("recent_order_locations")
+    data object OkeFast : Route("okefast")
 
     // --- Wallet ---
     data object Transactions : Route("transactions")
     data object Withdraw : Route("withdraw")
+    data object WithdrawHistory : Route("withdraw_history")
     data object TopUp : Route("topup")
+    data object TopUpHistory : Route("topup_history")
     data object BonusBox : Route("bonus_box")
     data class TopUpDetail(val depositId: Long) : Route("topup_detail/{deposit_id}") {
         companion object {
             const val TEMPLATE = "topup_detail/{deposit_id}"
             const val ARG = "deposit_id"
+            fun create(depositId: Long): String = "topup_detail/$depositId"
         }
     }
 
@@ -89,6 +94,7 @@ sealed class Route(val path: String) {
         companion object {
             const val TEMPLATE = "news_detail/{news_id}"
             const val ARG = "news_id"
+            fun create(newsId: Int): String = "news_detail/$newsId"
         }
     }
 

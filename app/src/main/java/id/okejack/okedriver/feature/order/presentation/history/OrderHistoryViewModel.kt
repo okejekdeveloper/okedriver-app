@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,28 +20,45 @@ class OrderHistoryViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(OrderHistoryUiState())
     val state: StateFlow<OrderHistoryUiState> = _state
+    private var loadJob: Job? = null
+    private var nextPage = 1
 
     init {
         loadOrders()
     }
 
-    fun loadOrders() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = getOrdersUseCase()) {
+    fun loadOrders(inProgress: Boolean = _state.value.inProgress) {
+        loadJob?.cancel()
+        nextPage = 1
+        _state.update { it.copy(inProgress = inProgress, hasMore = true, isLoading = true, isLoadingMore = false, errorMessage = null) }
+        loadPage(1, inProgress)
+    }
+
+    fun loadMore() {
+        if (_state.value.isLoading || _state.value.isLoadingMore || !_state.value.hasMore) return
+        _state.update { it.copy(isLoadingMore = true) }
+        loadPage(nextPage, _state.value.inProgress)
+    }
+
+    private fun loadPage(page: Int, inProgress: Boolean) {
+        loadJob = viewModelScope.launch {
+            when (val result = getOrdersUseCase(page, inProgress)) {
                 is ApiResponse.Success -> {
                     _state.update {
                         it.copy(
-                            orders = result.data,
+                            orders = if (page == 1) result.data else (it.orders + result.data).distinctBy { order -> order.id },
                             isLoading = false,
-                            errorMessage = null
+                            errorMessage = null,
+                            isLoadingMore = false,
+                            hasMore = result.data.isNotEmpty()
                         )
                     }
+                    nextPage = page + 1
                 }
                 is ApiResponse.Error -> {
                     _state.update {
                         it.copy(
-                            isLoading = false,
+                            isLoading = false, isLoadingMore = false,
                             errorMessage = result.message
                         )
                     }
@@ -54,7 +72,10 @@ class OrderHistoryViewModel @Inject constructor(
 data class OrderHistoryUiState(
     val orders: List<DriverOrder> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = true,
+    val inProgress: Boolean = false
 ) {
     val inProgressOrders: List<DriverOrder>
         get() = orders.filter { it.status != DriverOrder.STATUS_ARRIVED && it.status != DriverOrder.STATUS_CANCELLED }

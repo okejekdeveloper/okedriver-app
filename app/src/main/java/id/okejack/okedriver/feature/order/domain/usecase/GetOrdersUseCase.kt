@@ -8,6 +8,6 @@ import javax.inject.Inject
 class GetOrdersUseCase @Inject constructor(
     private val repository: OrderRepository
 ) {
-    suspend operator fun invoke(page: Int = 1): ApiResponse<List<DriverOrder>> =
-        repository.getOrders(page)
+    suspend operator fun invoke(page: Int = 1, inProgress: Boolean = false): ApiResponse<List<DriverOrder>> =
+        repository.getOrders(page, inProgress)
 }

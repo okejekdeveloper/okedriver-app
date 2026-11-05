@@ -7,52 +7,28 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-
-private val OkeLightColorScheme = lightColorScheme(
-    primary = OkePrimary,
-    onPrimary = OkeTextOnPrimary,
-    primaryContainer = OkePrimaryContainer,
-    onPrimaryContainer = OkePrimaryDark,
-    secondary = OkeSecondary,
-    onSecondary = Color.White,
-    secondaryContainer = OkeSecondaryContainer,
-    background = OkeBg,
-    onBackground = OkeTextPrimary,
-    surface = OkeSurface,
-    onSurface = OkeTextPrimary,
-    surfaceVariant = OkeInputBg,
-    onSurfaceVariant = OkeTextSecondary,
-    outline = OkeCardBorder,
-    outlineVariant = OkeInputBorder,
-    error = OkeDanger,
-    onError = Color.White
-)
-
-private val OkeDarkColorScheme = darkColorScheme(
-    primary = OkePrimaryLight,
-    onPrimary = OkeDarkBg,
-    primaryContainer = OkeDarkSurface,
-    onPrimaryContainer = OkePrimaryLight,
-    secondary = OkeSecondary,
-    onSecondary = OkeDarkBg,
-    background = OkeDarkBg,
-    onBackground = Color.White,
-    surface = OkeDarkSurface,
-    onSurface = Color.White,
-    error = OkeDanger,
-    onError = Color.White
-)
+import id.okejack.okedriver.core.designsystem.theme.simple.SimpleLightColors
+import id.okejack.okedriver.core.designsystem.theme.simple.SimpleDarkColors
+import id.okejack.okedriver.core.designsystem.theme.dynamic.DynamicLightColors
+import id.okejack.okedriver.core.designsystem.theme.dynamic.DynamicDarkColors
 
 @Composable
 fun OkedriverTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    uiStyle: DriverUiStyle = LocalDriverUiStyle.current,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) OkeDarkColorScheme else OkeLightColorScheme
+    val colorScheme = when {
+        uiStyle == DriverUiStyle.DYNAMIC && darkTheme -> DynamicDarkColors
+        uiStyle == DriverUiStyle.DYNAMIC -> DynamicLightColors
+        darkTheme -> SimpleDarkColors
+        else -> SimpleLightColors
+    }
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -63,10 +39,12 @@ fun OkedriverTheme(
         }
     }
 
+    CompositionLocalProvider(LocalDriverUiStyle provides uiStyle) {
     MaterialTheme(
         colorScheme = colorScheme,
         typography = OkeTypography,
         shapes = OkeShapes,
         content = content
     )
+    }
 }

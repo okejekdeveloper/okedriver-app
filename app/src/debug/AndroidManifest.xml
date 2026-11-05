@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Data-only UI review, excluded from release builds. -->
+        <activity android:name=".debug.DriverUiReviewActivity" android:exported="true" />
+    </application>
+</manifest>

@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.order.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.order.domain.model.ChatMessage
 
@@ -11,10 +13,12 @@ data class ChatMessagesResponseDto(
     val data: ChatDataDto? = null
 ) {
     val isSuccessful: Boolean get() = success || status
-    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal memuat chat" } }
+    val errorMessage: String get() = ServerErrors.message(error, message, "Gagal memuat chat")
 }
 
 data class ChatDataDto(
+    /** The key the server actually uses for the message list (the legacy app reads `data.order_chat_messages`). */
+    @SerializedName("order_chat_messages") val orderChatMessages: List<ChatMessageDto>? = null,
     val chats: List<ChatMessageDto>? = null,
     val messages: List<ChatMessageDto>? = null
 )
@@ -42,5 +46,5 @@ fun ChatMessageDto.toDomain(): ChatMessage =
     )
 
 fun ChatMessagesResponseDto.toMessageList(): List<ChatMessage> =
-    (data?.chats.orEmpty() + data?.messages.orEmpty())
+    (data?.orderChatMessages ?: data?.chats ?: data?.messages).orEmpty()
         .map { it.toDomain() }

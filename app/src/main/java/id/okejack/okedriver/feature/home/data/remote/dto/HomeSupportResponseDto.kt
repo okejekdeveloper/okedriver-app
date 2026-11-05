@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.home.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
 
@@ -31,7 +33,9 @@ data class HomeQueueResponseDto(
 
 data class HomeQueueDataDto(
     @SerializedName("driver_queue_number") val queueNumber: Int? = null,
-    @SerializedName("queue_terminal") val queueTerminal: String? = null
+    @SerializedName("queue_terminal") val queueTerminal: String? = null,
+    @SerializedName("queue_terminal_total") val queueTerminalTotal: Int? = null,
+    @SerializedName(value = "message", alternate = ["queue_message"]) val queueMessage: String = ""
 )
 
 data class HomeCurrentOrderResponseDto(
@@ -67,7 +71,7 @@ data class HomeInitResponseDto(
 data class HomeInitDataDto(
     @SerializedName("current_stable_build") val currentStableBuild: Int = 0,
     @SerializedName("current_stable_version") val currentStableVersion: String = "",
-    @SerializedName("init_settings") val initSettings: HomeInitSettingsDto = HomeInitSettingsDto()
+    @SerializedName(value = "initSettings", alternate = ["init_settings"]) val initSettings: HomeInitSettingsDto = HomeInitSettingsDto()
 )
 
 data class HomeInitSettingsDto(
@@ -99,13 +103,14 @@ data class HomeSubmitStatusResponseDto(
     val data: HomeSubmitStatusDataDto = HomeSubmitStatusDataDto()
 ) {
     val isSuccessful: Boolean get() = success || status
-    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal menyimpan absensi" } }
+    val errorMessage: String get() = ServerErrors.message(error, message, "Gagal menyimpan absensi")
 }
 
 data class HomeSubmitStatusDataDto(
-    @SerializedName("queue_number") val queueNumber: Int? = null,
+    @SerializedName(value = "driver_queue_number", alternate = ["queue_number"]) val queueNumber: Int? = null,
     @SerializedName("queue_terminal") val queueTerminal: String? = null,
-    @SerializedName("queue_message") val queueMessage: String = ""
+    @SerializedName("queue_terminal_total") val queueTerminalTotal: Int? = null,
+    @SerializedName(value = "message", alternate = ["queue_message"]) val queueMessage: String = ""
 )
 
 fun toHomeSupportInfo(
@@ -114,14 +119,18 @@ fun toHomeSupportInfo(
     currentOrder: HomeCurrentOrderResponseDto?,
     init: HomeInitResponseDto?,
     absence: HomeAbsenceResponseDto? = null,
-    queueEnabled: Boolean = false
+    queueEnabled: Boolean = false,
+    attendanceEnabled: Boolean = false
 ): HomeSupportInfo =
     HomeSupportInfo(
         motd = motd?.takeIf { it.isSuccessful }?.data?.motd.orEmpty(),
         queueEnabled = queueEnabled,
+        attendanceEnabled = attendanceEnabled,
         hasAttended = absence?.takeIf { it.isSuccessful }?.data?.driverStatus ?: false,
         queueNumber = queue?.takeIf { it.isSuccessful }?.data?.queueNumber,
         queueTerminal = queue?.takeIf { it.isSuccessful }?.data?.queueTerminal,
+        queueTerminalTotal = queue?.takeIf { it.isSuccessful }?.data?.queueTerminalTotal,
+        queueMessage = queue?.takeIf { it.isSuccessful }?.data?.queueMessage.orEmpty(),
         activeOrderId = currentOrder
             ?.takeIf { it.isSuccessful }
             ?.data

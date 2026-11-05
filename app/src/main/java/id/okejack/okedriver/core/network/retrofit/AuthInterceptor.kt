@@ -8,6 +8,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.gson.JsonParser
 
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -25,8 +26,14 @@ class AuthInterceptor @Inject constructor(
         }.build()
 
         val response = chain.proceed(request)
-        if (response.code == 401) {
-            runBlocking(Dispatchers.IO) { sessionDataStore.clearSession() }
+        val legacySessionExpired = if (response.header("Content-Type").orEmpty().contains("json")) {
+            runCatching {
+                JsonParser.parseString(response.peekBody(16_384).string()).asJsonObject
+                    .get("error")?.asString == "session_not_valid"
+            }.getOrDefault(false)
+        } else false
+        if ((response.code == 401 || legacySessionExpired) && !token.isNullOrBlank()) {
+            runBlocking(Dispatchers.IO) { sessionDataStore.expireSession(token) }
         }
         return response
     }

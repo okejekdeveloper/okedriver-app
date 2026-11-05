@@ -26,6 +26,8 @@ class EditShoppingItemsViewModel @Inject constructor(
     val state: StateFlow<EditShoppingItemsUiState> = _state
 
     fun loadOrder(orderId: Long) {
+        if (_state.value.isLoading || _state.value.isSubmitting) return
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = getOrderDetailUseCase(orderId)) {
@@ -35,7 +37,7 @@ class EditShoppingItemsViewModel @Inject constructor(
                         it.copy(
                             orderId = order.id,
                             items = order.items.map { item -> item.toEditable() },
-                            isAlreadyEdited = order.shoppingEditedAt.isNotBlank(),
+                            isAlreadyEdited = !order.canEditShopping,
                             isLoading = false
                         )
                     }
@@ -49,7 +51,7 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun addItem(name: String, detail: String, quantity: Int, price: BigDecimal) {
-        if (name.isBlank() || quantity < 1) return
+        if (!canModify() || name.isBlank() || quantity < 1 || price < BigDecimal.ZERO) return
         _state.update {
             it.copy(
                 items = it.items + EditableItem(
@@ -61,7 +63,7 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun addFeeItem(name: String, price: BigDecimal) {
-        if (price <= BigDecimal.ZERO) return
+        if (!canModify() || name.isBlank() || price <= BigDecimal.ZERO) return
         _state.update {
             it.copy(
                 items = it.items + EditableItem(
@@ -76,6 +78,7 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun updateItem(index: Int, name: String, detail: String, quantity: Int, price: BigDecimal) {
+        if (!canModify() || name.isBlank() || quantity < 1 || price < BigDecimal.ZERO) return
         val items = _state.value.items.toMutableList()
         if (index < 0 || index >= items.size) return
         items[index] = items[index].copy(
@@ -85,6 +88,7 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun updateFeeItem(index: Int, price: BigDecimal) {
+        if (!canModify() || price <= BigDecimal.ZERO) return
         val items = _state.value.items.toMutableList()
         if (index < 0 || index >= items.size) return
         items[index] = items[index].copy(price = price)
@@ -92,6 +96,7 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun removeItem(index: Int) {
+        if (!canModify()) return
         val items = _state.value.items.toMutableList()
         if (index < 0 || index >= items.size) return
         items.removeAt(index)
@@ -99,13 +104,14 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun submitItems(onSuccess: () -> Unit) {
+        if (!canModify()) return
         val s = _state.value
         if (s.items.isEmpty()) {
             _state.update { it.copy(errorMessage = "Item tidak boleh kosong") }
             return
         }
+        _state.update { it.copy(isSubmitting = true, errorMessage = null) }
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, errorMessage = null) }
             when (val result = editShoppingItemsUseCase(s.orderId, s.items)) {
                 is ApiResponse.Success -> {
                     _state.update { it.copy(isSubmitting = false, isDirty = false) }
@@ -120,12 +126,16 @@ class EditShoppingItemsViewModel @Inject constructor(
     }
 
     fun clearError() = _state.update { it.copy(errorMessage = null) }
+
+    private fun canModify(): Boolean = _state.value.let {
+        it.orderId > 0 && !it.isLoading && !it.isSubmitting && !it.isAlreadyEdited
+    }
 }
 
 data class EditShoppingItemsUiState(
     val orderId: Long = 0L,
     val items: List<EditableItem> = emptyList(),
-    val isAlreadyEdited: Boolean = false,
+    val isAlreadyEdited: Boolean = true,
     val isDirty: Boolean = false,
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,

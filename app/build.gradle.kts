@@ -35,7 +35,7 @@ android {
     signingConfigs {
         if (hasReleaseSigningConfig) {
             create("release") {
-                storeFile = file(localProperty("KEYSTORE_FILE")!!)
+                storeFile = rootProject.file(localProperty("KEYSTORE_FILE")!!).canonicalFile
                 storePassword = localProperty("KEYSTORE_PASSWORD")!!
                 keyAlias = localProperty("KEY_ALIAS")!!
                 keyPassword = localProperty("KEY_PASSWORD")!!
@@ -46,12 +46,13 @@ android {
     defaultConfig {
         applicationId = "id.okejack.okedriver"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 4840
-        versionName = "4.8.14"
+        targetSdk = 36
+        versionCode = 4866
+        versionName = "5.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["googleMapsApiKey"] = localProperty("MAPS_API_KEY") ?: ""
+        buildConfigField("String", "DIRECTIONS_API_KEY", "\"${localProperty("DIRECTIONS_API_KEY").orEmpty()}\"")
         multiDexEnabled = true
     }
 
@@ -84,6 +85,16 @@ android {
         buildConfig = true
     }
 }
+
+val validateProductionConfig by tasks.registering {
+    doLast {
+        check(hasReleaseSigningConfig) { "Release membutuhkan KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, dan KEY_PASSWORD." }
+        check(rootProject.file(localProperty("KEYSTORE_FILE")!!).isFile) { "Release keystore tidak ditemukan." }
+        check(!localProperty("MAPS_API_KEY").isNullOrBlank()) { "Release membutuhkan MAPS_API_KEY." }
+        check(!localProperty("DIRECTIONS_API_KEY").isNullOrBlank()) { "Release membutuhkan DIRECTIONS_API_KEY untuk rute order." }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(validateProductionConfig) }
 
 dependencies {
     // Core
@@ -127,6 +138,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
 
     // Maps
     implementation(libs.maps.compose)
@@ -148,8 +160,10 @@ dependencies {
     implementation(libs.osmdroid)
 
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.navigation.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

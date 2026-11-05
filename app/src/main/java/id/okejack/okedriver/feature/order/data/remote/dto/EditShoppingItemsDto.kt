@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.order.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import id.okejack.okedriver.feature.order.domain.model.OrderLineItem
 import java.math.BigDecimal
 
@@ -11,7 +13,7 @@ data class EditShoppingItemsResponseDto(
     val data: OrderResponseDataDto? = null
 ) {
     val isSuccessful: Boolean get() = success || status
-    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal menyimpan item" } }
+    val errorMessage: String get() = ServerErrors.message(error, message, "Gagal menyimpan item")
 }
 
 data class EditShoppingItemRequestDto(
@@ -38,5 +40,6 @@ fun OrderLineItem.toRequestDto(): ShoppingItemDto =
         name = name,
         detail = detail,
         qty = quantity,
-        price = price
+        price = price,
+        type = type
     )

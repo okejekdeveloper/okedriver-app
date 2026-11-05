@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.home.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.auth.data.remote.dto.DriverDto
 import id.okejack.okedriver.feature.home.domain.model.HomeDriver
@@ -15,7 +17,7 @@ data class HomeDriverResponseDto(
         get() = success || status
 
     val errorMessage: String
-        get() = error.ifBlank { message.ifBlank { "Request gagal" } }
+        get() = ServerErrors.message(error, message, "Request gagal")
 }
 
 data class HomeDriverDataDto(
@@ -40,5 +42,7 @@ fun DriverDto.toHomeDriver(): HomeDriver =
         isOnline = online,
         isOnTrip = false,
         isAvailableForBidding = false,
-        hasActiveBid = false
+        hasActiveBid = false,
+        isAttendanceEnabled = enableDriverAttendance,
+        isOkefastEnabled = enableOkefast
     )

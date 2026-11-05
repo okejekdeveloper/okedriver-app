@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.order.presentation.payments
 
+import id.okejack.okedriver.core.designsystem.component.DriverButton as Button
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -165,7 +167,7 @@ private fun PaymentsContent(order: DriverOrder, modifier: Modifier = Modifier) {
                     color = OkeTextPrimary
                 )
 
-                PaymentRow("Ongkos kirim", order.fee)
+                PaymentRow("Ongkos kirim", order.totalFee)
 
                 if (order.originalFee != order.fee && order.originalFee > BigDecimal.ZERO) {
                     PaymentRow("Harga asli", order.originalFee, strikethrough = true)
@@ -178,6 +180,13 @@ private fun PaymentsContent(order: DriverOrder, modifier: Modifier = Modifier) {
                 }
                 if (order.serviceFee > BigDecimal.ZERO) {
                     PaymentRow("Biaya layanan", order.serviceFee)
+                }
+                if (order.additionalPayments.isNotEmpty()) {
+                    Text("Rincian biaya tambahan", fontWeight = FontWeight.Bold)
+                    order.additionalPayments.forEach { charge ->
+                        PaymentRow(charge.title.ifBlank { "Biaya tambahan" }, charge.fee)
+                        if (charge.detail.isNotBlank()) Text(charge.detail, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
 
                 HorizontalDivider(color = OkeDivider)

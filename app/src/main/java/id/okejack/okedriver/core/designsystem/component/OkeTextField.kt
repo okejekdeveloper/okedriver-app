@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.VisualTransformation
+import id.okejack.okedriver.core.designsystem.theme.OkeShapeInput
 
 @Composable
 fun OkeTextField(
@@ -28,6 +29,7 @@ fun OkeTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
     OutlinedTextField(
+        shape = OkeShapeInput,
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },

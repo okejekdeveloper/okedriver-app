@@ -5,18 +5,18 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 val OkeShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small      = RoundedCornerShape(10.dp),
-    medium     = RoundedCornerShape(14.dp),
-    large      = RoundedCornerShape(18.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(4.dp),
+    small      = RoundedCornerShape(6.dp),
+    medium     = RoundedCornerShape(8.dp),
+    large      = RoundedCornerShape(12.dp),
+    extraLarge = RoundedCornerShape(16.dp)
 )
 
 // ── Semantic shape aliases ────────────────────────────────────────────────────
-val OkeShapeCard   = RoundedCornerShape(18.dp)
-val OkeShapeInput  = RoundedCornerShape(14.dp)
-val OkeShapeButton = RoundedCornerShape(28.dp)   // pill CTA
-val OkeShapeChip   = RoundedCornerShape(100.dp)  // fully round pill
-val OkeShapeSheet  = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-val OkeShapeSmall  = RoundedCornerShape(10.dp)
-val OkeShapeTiny   = RoundedCornerShape(6.dp)
+val OkeShapeCard   = RoundedCornerShape(8.dp)
+val OkeShapeInput  = RoundedCornerShape(6.dp)
+val OkeShapeButton = RoundedCornerShape(6.dp)
+val OkeShapeChip   = RoundedCornerShape(4.dp)
+val OkeShapeSheet  = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+val OkeShapeSmall  = RoundedCornerShape(6.dp)
+val OkeShapeTiny   = RoundedCornerShape(4.dp)

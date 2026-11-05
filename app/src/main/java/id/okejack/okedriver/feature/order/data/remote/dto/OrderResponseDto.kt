@@ -1,10 +1,17 @@
 package id.okejack.okedriver.feature.order.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.order.domain.model.CourierInfo
 import id.okejack.okedriver.feature.order.domain.model.DriverOrder
 import id.okejack.okedriver.feature.order.domain.model.OrderLineItem
 import java.math.BigDecimal
+import id.okejack.okedriver.feature.order.domain.model.CustomerScore
+import id.okejack.okedriver.feature.order.domain.model.OrderCancellation
+import id.okejack.okedriver.feature.order.domain.model.OrderMerchant
+import id.okejack.okedriver.feature.order.domain.model.OrderPackageInfo
+import id.okejack.okedriver.feature.order.domain.model.OrderCharge
 
 data class OrderResponseDto(
     val success: Boolean = false,
@@ -17,7 +24,7 @@ data class OrderResponseDto(
         get() = success || status
 
     val errorMessage: String
-        get() = error.ifBlank { message.ifBlank { "Request order gagal" } }
+        get() = ServerErrors.message(error, message, "Request order gagal")
 }
 
 data class OrderResponseDataDto(
@@ -49,7 +56,18 @@ data class OrderDto(
     val user: OrderUserDto? = null,
     val courier: OrderCourierDto? = null,
     val items: List<OrderItemDto>? = null,
-    @SerializedName("shopping_edited_at") val shoppingEditedAt: String? = null
+    @SerializedName("shopping_edited_at") val shoppingEditedAt: String? = null,
+    val express: OrderExpressDto? = null,
+    @SerializedName("original_total_shopping") val originalTotalShopping: BigDecimal? = null,
+    val route: String? = null,
+    val score: OrderScoreDto? = null,
+    val cancel: OrderCancellationDto? = null,
+    @SerializedName("food_vendor") val foodVendor: OrderMerchantDto? = null,
+    @SerializedName("package") val orderPackage: OrderPackageDto? = null,
+    val duration: Int? = null,
+    val overtime: Int? = null,
+    @SerializedName("overtime_fee") val overtimeFee: BigDecimal? = null,
+    val payments: List<OrderChargeDto>? = null
 )
 
 data class OrderPaymentDto(
@@ -58,6 +76,13 @@ data class OrderPaymentDto(
     val amount: Int? = null,
     val status: Int? = null
 )
+
+data class OrderExpressDto(val fee: BigDecimal? = null, @SerializedName("verification_code") val verificationCode: String? = null)
+data class OrderScoreDto(val score: Int? = null, val review: String? = null)
+data class OrderCancellationDto(val actor: Int? = null, val reason: String? = null, @SerializedName("cancelled_at") val cancelledAt: String? = null)
+data class OrderMerchantDto(val id: Long? = null, val name: String? = null, val address: String? = null, val phone: String? = null)
+data class OrderPackageDto(val name: String? = null, val description: String? = null)
+data class OrderChargeDto(val title: String? = null, val detail: String? = null, val fee: BigDecimal? = null)
 
 data class OrderUserDto(
     val id: Long? = null,
@@ -79,7 +104,8 @@ data class OrderItemDto(
     val name: String? = null,
     val detail: String? = null,
     val qty: Int? = null,
-    val price: BigDecimal? = null
+    val price: BigDecimal? = null,
+    val type: Int? = null
 )
 
 fun OrderDto.toDomain(): DriverOrder =
@@ -109,7 +135,18 @@ fun OrderDto.toDomain(): DriverOrder =
         driverInfo = driverInfo.orEmpty(),
         courier = courier?.toDomain(),
         items = items.orEmpty().map { it.toDomain() },
-        shoppingEditedAt = shoppingEditedAt.orEmpty()
+        shoppingEditedAt = shoppingEditedAt.orEmpty(),
+        paymentProvider = payment?.provider.orEmpty(),
+        paymentStatus = payment?.status ?: 0,
+        expressFee = express?.fee ?: BigDecimal.ZERO,
+        originalTotalShopping = originalTotalShopping ?: totalShopping ?: BigDecimal.ZERO,
+        encodedRoute = route.orEmpty(),
+        customerScore = score?.let { CustomerScore(it.score ?: 0, it.review.orEmpty()) },
+        cancellation = cancel?.let { OrderCancellation(it.actor ?: 0, it.reason.orEmpty(), it.cancelledAt.orEmpty()) },
+        merchant = foodVendor?.takeIf { (it.id ?: 0) > 0 }?.let { OrderMerchant(it.name.orEmpty(), it.address.orEmpty(), it.phone.orEmpty()) },
+        packageInfo = orderPackage?.let { OrderPackageInfo(it.name.orEmpty(), it.description.orEmpty(), duration ?: 0, overtime ?: 0, overtimeFee ?: BigDecimal.ZERO) },
+        additionalPayments = payments.orEmpty().map { OrderCharge(it.title.orEmpty(), it.detail.orEmpty(), it.fee ?: BigDecimal.ZERO) },
+        expressVerificationCode = express?.verificationCode.orEmpty()
     )
 
 fun OrderCourierDto.toDomain(): CourierInfo =
@@ -127,7 +164,8 @@ fun OrderItemDto.toDomain(): OrderLineItem =
         name = name.orEmpty(),
         detail = detail.orEmpty(),
         quantity = qty ?: 1,
-        price = price ?: BigDecimal.ZERO
+        price = price ?: BigDecimal.ZERO,
+        type = type ?: 0
     )
 
 private fun String?.orValidLatLng(): String =

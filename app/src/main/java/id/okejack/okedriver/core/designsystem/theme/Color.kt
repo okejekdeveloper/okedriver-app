@@ -2,21 +2,22 @@ package id.okejack.okedriver.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 
-val OkePrimary = Color(0xFF7C3AED)
-val OkePrimaryVariant = Color(0xFF6D28D9)
-val OkePrimaryLight = Color(0xFFA78BFA)
-val OkePrimaryContainer = Color(0xFFEDE9FE)
-val OkePrimaryDark = Color(0xFF4C1D95)
+// Preserve the established Oke Driver brand; reserve saturated colour for actions.
+val OkePrimary = Color(0xFF3C2782)
+val OkePrimaryVariant = Color(0xFF302069)
+val OkePrimaryLight = Color(0xFFC9BCFF)
+val OkePrimaryContainer = Color(0xFFEEEAF8)
+val OkePrimaryDark = Color(0xFF302069)
 
-val OkeSecondary = Color(0xFF8B5CF6)
-val OkeSecondaryContainer = Color(0xFFF5F3FF)
+val OkeSecondary = Color(0xFF345C4B)
+val OkeSecondaryContainer = Color(0xFFE8F2EC)
 
-val OkeLoginGradientTop = Color(0xFF9F67FF)
-val OkeLoginGradientMid = Color(0xFF7C3AED)
-val OkeLoginGradientBottom = Color(0xFF4C1D95)
+val OkeLoginGradientTop = OkePrimary
+val OkeLoginGradientMid = OkePrimary
+val OkeLoginGradientBottom = OkePrimary
 
-val OkeCardGradientStart = Color(0xFF8B5CF6)
-val OkeCardGradientEnd = Color(0xFF5B21B6)
+val OkeCardGradientStart = OkePrimary
+val OkeCardGradientEnd = OkePrimary
 
 val OkeTopUpGradientStart = Color(0xFF6D28D9)
 val OkeTopUpGradientEnd = Color(0xFF4C1D95)
@@ -30,27 +31,27 @@ val OkeDarkPanel = Color(0xFF181830)
 val OkeMapRoad = Color(0xFF232350)
 val OkeMapRoute = Color(0xFF8B5CF6)
 
-val OkeBg = Color(0xFFF4F4F8)
+val OkeBg = Color(0xFFF5F6F7)
 val OkeSurface = Color(0xFFFFFFFF)
 val OkeCardBg = Color(0xFFFFFFFF)
-val OkeCardBorder = Color(0xFFEBEAF0)
+val OkeCardBorder = Color(0xFFDDE1E5)
 val OkeShadowColor = Color(0xFF000000)
 
-val OkeTextPrimary = Color(0xFF18181B)
-val OkeTextSecondary = Color(0xFF71717A)
-val OkeTextHint = Color(0xFFA1A1AA)
+val OkeTextPrimary = Color(0xFF1D252C)
+val OkeTextSecondary = Color(0xFF55616B)
+val OkeTextHint = Color(0xFF636E78)
 val OkeTextOnPrimary = Color.White
 
-val OkeInputBg = Color(0xFFF0EDFF)
-val OkeInputBorder = Color(0xFFDDD9F5)
+val OkeInputBg = Color(0xFFF0F2F4)
+val OkeInputBorder = Color(0xFF8C959E)
 
-val OkeSuccess = Color(0xFF10B981)
+val OkeSuccess = Color(0xFF146C43)
 val OkeSuccessBg = Color(0xFFD1FAE5)
-val OkeDanger = Color(0xFFEF4444)
+val OkeDanger = Color(0xFFBA1A1A)
 val OkeDangerBg = Color(0xFFFEE2E2)
-val OkeWarning = Color(0xFFF59E0B)
+val OkeWarning = Color(0xFF855000)
 val OkeWarningBg = Color(0xFFFEF3C7)
-val OkeGreenOnline = Color(0xFF10B981)
+val OkeGreenOnline = OkeSuccess
 val OkeGreyOffline = Color(0xFF71717A)
 
 val OkePickupDot = Color(0xFF10B981)

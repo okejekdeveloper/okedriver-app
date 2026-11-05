@@ -54,10 +54,11 @@ class OrderResponseDtoTest {
         assertEquals("-6.1,106.7", order.targetLatLng)
         assertEquals("Andi", order.customerName)
         assertEquals("Tunai", order.paymentProviderName)
-        assertEquals(BigDecimal("46000"), order.totalPaid)
+        // Legacy Order.totalPaid() does not add service_fee to the server total again.
+        assertEquals(BigDecimal("44000"), order.totalPaid)
         assertEquals(1, order.items.size)
         assertEquals(BigDecimal("30000"), order.items.first().total)
-        assertTrue(order.canCancel)
+        assertFalse(order.canCancel)
         assertTrue(order.canUpdateStatus)
     }
 

@@ -5,28 +5,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.material3.Scaffold
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import id.okejack.okedriver.BuildConfig
 import id.okejack.okedriver.feature.auth.domain.model.AuthDriver
 import id.okejack.okedriver.feature.auth.presentation.init.InitScreen
 import id.okejack.okedriver.feature.auth.presentation.login.LoginScreen
@@ -37,34 +26,88 @@ import id.okejack.okedriver.feature.order.presentation.detail.OrderDetailScreen
 import id.okejack.okedriver.feature.order.presentation.chat.ChatScreen
 import id.okejack.okedriver.feature.order.presentation.history.OrderHistoryScreen
 import id.okejack.okedriver.feature.order.presentation.incoming.IncomingOrderScreen
+import id.okejack.okedriver.feature.order.presentation.okefast.OkeFastScreen
 import id.okejack.okedriver.feature.order.presentation.payments.OrderPaymentsScreen
+import id.okejack.okedriver.feature.order.presentation.recent.RecentOrderLocationsScreen
 import id.okejack.okedriver.feature.home.presentation.attendance.AttendanceScreen
 import id.okejack.okedriver.feature.order.presentation.shopping.EditShoppingItemsScreen
 import id.okejack.okedriver.feature.profile.presentation.ProfileScreen
+import id.okejack.okedriver.feature.profile.presentation.edit.EditProfileScreen
+import id.okejack.okedriver.feature.profile.presentation.referral.ReferralScreen
+import id.okejack.okedriver.feature.wallet.presentation.TransactionHistoryScreen
 import id.okejack.okedriver.feature.wallet.presentation.WalletScreen
+import id.okejack.okedriver.feature.wallet.presentation.WithdrawScreen
+import id.okejack.okedriver.feature.wallet.presentation.topup.TopUpDetailScreen
+import id.okejack.okedriver.feature.wallet.presentation.topup.TopUpHistoryScreen
+import id.okejack.okedriver.feature.wallet.presentation.topup.TopUpScreen
+import id.okejack.okedriver.feature.wallet.presentation.bonus.BonusBoxScreen
+import id.okejack.okedriver.feature.settings.presentation.SettingsScreen
+import id.okejack.okedriver.feature.settings.presentation.bid.DriverBidScreen
+import id.okejack.okedriver.feature.settings.presentation.connect.ConnectAccountScreen
+import id.okejack.okedriver.feature.news.presentation.list.NewsListScreen
+import id.okejack.okedriver.feature.news.presentation.detail.NewsDetailScreen
+import id.okejack.okedriver.core.datastore.SessionDataStore
+import kotlinx.coroutines.flow.filter
+import androidx.compose.runtime.collectAsState
+import androidx.navigation.compose.currentBackStackEntryAsState
+import id.okejack.okedriver.core.service.NotificationTarget
+import id.okejack.okedriver.core.service.NotificationKind
+import com.google.gson.Gson
+import id.okejack.okedriver.feature.wallet.domain.model.TopUpDeposit
 
 @Composable
 fun OkeDriverNavGraph(
     navController: NavHostController,
+    sessionDataStore: SessionDataStore,
     modifier: Modifier = Modifier,
-    initialIncomingOrderId: Long = 0L
+    notificationTarget: NotificationTarget? = null,
+    onNotificationConsumed: () -> Unit = {}
 ) {
     var lastLoggedInDriver by remember { mutableStateOf<AuthDriver?>(null) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val token by sessionDataStore.token.collectAsState(initial = null)
+    LaunchedEffect(notificationTarget, backStackEntry, token) {
+        val target = notificationTarget
+        val currentRoute = backStackEntry?.destination?.route
+        if (target != null && target.isValid && !token.isNullOrBlank() && currentRoute != null &&
+            currentRoute != Route.Init.path && currentRoute != Route.Login.path
+        ) {
+            val route = when (target.kind) {
+                NotificationKind.ORDER -> Route.IncomingOrder.create(target.id)
+                NotificationKind.CHAT -> Route.Chat.create(target.id)
+                NotificationKind.NEWS -> Route.NewsDetail.create(target.id.toInt())
+                NotificationKind.BONUS -> Route.BonusBox.path
+                NotificationKind.GENERAL -> Route.Home.path
+            }
+            navController.navigateSingleTop(route)
+            onNotificationConsumed()
+        }
+    }
 
+    LaunchedEffect(sessionDataStore) {
+        sessionDataStore.sessionExpired.filter { it }.collect {
+            navController.returnToLogin()
+            sessionDataStore.acknowledgeSessionExpired()
+        }
+    }
+
+    val rootTab = DriverTab.entries.firstOrNull { it.route == backStackEntry?.destination?.route }
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (rootTab != null) DriverNavigationBar(rootTab.route, navController::navigateToTab)
+        }
+    ) { shellPadding ->
     NavHost(
         navController = navController,
         startDestination = Route.Init.path,
-        modifier = modifier
+        modifier = modifier.padding(shellPadding).consumeWindowInsets(shellPadding)
     ) {
         // --- Auth (Phase 1) ---
         composable(Route.Init.path) {
             InitScreen(
                 onLoggedIn = {
-                    val destination = initialIncomingOrderId
-                        .takeIf { it > 0 }
-                        ?.let { Route.IncomingOrder.create(it) }
-                        ?: Route.Home.path
-                    navController.navigate(destination) {
+                    navController.navigate(Route.Home.path) {
                         popUpTo(Route.Init.path) { inclusive = true }
                     }
                 },
@@ -108,11 +151,7 @@ fun OkeDriverNavGraph(
         composable(Route.Home.path) {
             HomeScreen(
                 onLoggedOut = {
-                    navController.navigate(Route.Login.path) {
-                        popUpTo(navController.graph.id) {
-                            inclusive = true
-                        }
-                    }
+                    navController.returnToLogin()
                 },
                 onOpenBalance = { navController.navigateSingleTop(Route.Balance.path) },
                 onOpenHistory = { navController.navigateSingleTop(Route.OrderHistory.path) },
@@ -122,18 +161,26 @@ fun OkeDriverNavGraph(
                 onOpenCurrentOrder = { orderId ->
                     navController.navigateSingleTop(Route.CurrentOrder.create(orderId))
                 },
-                onOpenAttendance = { navController.navigateSingleTop(Route.AirportAttendance.path) }
+                onOpenAttendance = { navController.navigateSingleTop(Route.AirportAttendance.path) },
+                onOpenRecentOrders = { navController.navigateSingleTop(Route.RecentOrderLocations.path) },
+                onOpenOkeFast = { navController.navigateSingleTop(Route.OkeFast.path) }
             )
         }
         composable(Route.Balance.path) {
             WalletScreen(
+                isRoot = true,
                 onBackClick = { navController.popBackStack() },
                 onTopUpClick = { navController.navigateSingleTop(Route.TopUp.path) },
-                onWithdrawClick = { navController.navigateSingleTop(Route.Withdraw.path) }
+                onWithdrawClick = { navController.navigateSingleTop(Route.Withdraw.path) },
+                onTransactionsClick = { navController.navigateSingleTop(Route.Transactions.path) },
+                onWithdrawHistoryClick = { navController.navigateSingleTop(Route.WithdrawHistory.path) },
+                onTopUpHistoryClick = { navController.navigateSingleTop(Route.TopUpHistory.path) },
+                onBonusClick = { navController.navigateSingleTop(Route.BonusBox.path) }
             )
         }
         composable(Route.OrderHistory.path) {
             OrderHistoryScreen(
+                isRoot = true,
                 onBackClick = { navController.popBackStack() },
                 onOrderClick = { orderId ->
                     navController.navigateSingleTop(Route.OrderDetail.create(orderId))
@@ -142,18 +189,23 @@ fun OkeDriverNavGraph(
         }
         composable(Route.Profile.path) {
             ProfileScreen(
+                isRoot = true,
+                onSettingsClick = { navController.navigateSingleTop(Route.Settings.path) },
+                onNewsClick = { navController.navigateSingleTop(Route.News.path) },
                 onBackClick = { navController.popBackStack() },
+                onEditProfileClick = { navController.navigateSingleTop(Route.EditProfile.path) },
+                onReferralClick = { navController.navigateSingleTop(Route.Referral.path) },
+                onConnectAccountClick = { navController.navigateSingleTop(Route.ConnectAccount.path) },
                 onLogoutClick = {
-                    navController.navigate(Route.Login.path) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
+                    navController.returnToLogin()
                 }
             )
         }
         composable(Route.Settings.path) {
-            PlaceholderScreen(
-                title = "Pengaturan",
-                onBackClick = { navController.popBackStack() }
+            SettingsScreen(
+                onBackClick = { navController.popBackStack() },
+                onDriverBidClick = { navController.navigateSingleTop(Route.DriverBid.path) },
+                onConnectAccountClick = { navController.navigateSingleTop(Route.ConnectAccount.path) }
             )
         }
 
@@ -237,39 +289,94 @@ fun OkeDriverNavGraph(
                 onBackClick = { navController.popBackStack() }
             )
         }
+        composable(Route.RecentOrderLocations.path) {
+            RecentOrderLocationsScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Route.OkeFast.path) {
+            OkeFastScreen(onBackClick = { navController.popBackStack() })
+        }
 
         // --- Wallet (Phase 4) ---
-        composable(Route.Transactions.path) { /* TODO */ }
-        composable(Route.Withdraw.path) { /* TODO */ }
-        composable(Route.TopUp.path) { /* TODO */ }
-        composable(Route.BonusBox.path) { /* TODO */ }
+        composable(Route.Transactions.path) {
+            TransactionHistoryScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Route.WithdrawHistory.path) {
+            TransactionHistoryScreen(
+                onBackClick = { navController.popBackStack() },
+                withdrawableOnly = true
+            )
+        }
+        composable(Route.Withdraw.path) {
+            WithdrawScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Route.TopUp.path) {
+            TopUpScreen(
+                onBackClick = { navController.popBackStack() },
+                onTopUpCreated = { deposit ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set("created_topup", Gson().toJson(deposit))
+                    navController.navigate(Route.TopUpDetail.create(deposit.id))
+                }
+            )
+        }
+        composable(Route.TopUpHistory.path) {
+            TopUpHistoryScreen(
+                onBackClick = { navController.popBackStack() },
+                onDepositClick = { navController.navigateSingleTop(Route.TopUpDetail.create(it)) }
+            )
+        }
+        composable(Route.BonusBox.path) {
+            BonusBoxScreen(onBackClick = { navController.popBackStack() })
+        }
         composable(
             route = Route.TopUpDetail.TEMPLATE,
             arguments = listOf(navArgument(Route.TopUpDetail.ARG) { type = NavType.LongType })
-        ) { /* TODO */ }
+        ) { backStackEntry ->
+            TopUpDetailScreen(
+                depositId = backStackEntry.arguments?.getLong(Route.TopUpDetail.ARG) ?: 0L,
+                initialDeposit = runCatching {
+                    val json = navController.previousBackStackEntry?.savedStateHandle?.get<String>("created_topup")
+                    Gson().fromJson(json, TopUpDeposit::class.java)
+                }.getOrNull(),
+                onBackClick = { navController.popBackStack() }
+            )
+        }
 
         // --- Profile (Phase 5) ---
-        composable(Route.EditProfile.path) { /* TODO */ }
-        composable(Route.DriverBid.path) { /* TODO */ }
-        composable(Route.ConnectAccount.path) { /* TODO */ }
+        composable(Route.EditProfile.path) {
+            EditProfileScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Route.DriverBid.path) {
+            DriverBidScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Route.ConnectAccount.path) {
+            ConnectAccountScreen(onBackClick = { navController.popBackStack() })
+        }
 
         // --- News (Phase 6) ---
         composable(Route.News.path) {
-            PlaceholderScreen(
-                title = "Berita",
-                onBackClick = { navController.popBackStack() }
+            NewsListScreen(
+                onBackClick = { navController.popBackStack() },
+                onNewsClick = { navController.navigateSingleTop(Route.NewsDetail.create(it)) }
             )
         }
         composable(
             route = Route.NewsDetail.TEMPLATE,
             arguments = listOf(navArgument(Route.NewsDetail.ARG) { type = NavType.IntType })
-        ) { /* TODO */ }
+        ) { backStackEntry ->
+            NewsDetailScreen(
+                newsId = backStackEntry.arguments?.getInt(Route.NewsDetail.ARG) ?: 0,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
 
         // --- Misc (Phase 6) ---
-        composable(Route.Referral.path) { /* TODO */ }
+        composable(Route.Referral.path) {
+            ReferralScreen(onBackClick = { navController.popBackStack() })
+        }
         composable(Route.AirportAttendance.path) {
             AttendanceScreen(onBackClick = { navController.popBackStack() })
         }
+    }
     }
 }
 
@@ -280,44 +387,11 @@ private fun NavHostController.navigateSingleTop(route: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    onBackClick: () -> Unit
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Kembali"
-                        )
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(
-                text = "Segera tersedia",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+private fun NavHostController.returnToLogin() {
+    // Saved tab state belongs to this session, including any loaded account balances.
+    DriverTab.entries.forEach { clearBackStack(it.route) }
+    navigate(Route.Login.path) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
     }
 }

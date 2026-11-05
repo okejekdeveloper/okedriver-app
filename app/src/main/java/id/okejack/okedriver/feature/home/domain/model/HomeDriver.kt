@@ -17,5 +17,7 @@ data class HomeDriver(
     val isOnline: Boolean,
     val isOnTrip: Boolean,
     val isAvailableForBidding: Boolean,
-    val hasActiveBid: Boolean
+    val hasActiveBid: Boolean,
+    val isAttendanceEnabled: Boolean = false,
+    val isOkefastEnabled: Boolean = false
 )

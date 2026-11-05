@@ -45,6 +45,33 @@ class HomeDriverResponseDtoTest {
     }
 
     @Test
+    fun toHomeDriver_okefastFollowsEnableOkefast() {
+        assertEquals(true, DriverDto(enableOkefast = true).toHomeDriver().isOkefastEnabled)
+        assertEquals(false, DriverDto(enableOkefast = false).toHomeDriver().isOkefastEnabled)
+        assertEquals(false, DriverDto().toHomeDriver().isOkefastEnabled)
+    }
+
+    @Test
+    fun toHomeDriver_attendanceIndependentFromOkefast() {
+        val attendanceOnly = DriverDto(enableDriverAttendance = true, enableOkefast = false).toHomeDriver()
+        assertEquals(true, attendanceOnly.isAttendanceEnabled)
+        assertEquals(false, attendanceOnly.isOkefastEnabled)
+
+        val okefastOnly = DriverDto(enableDriverAttendance = false, enableOkefast = true).toHomeDriver()
+        assertEquals(false, okefastOnly.isAttendanceEnabled)
+        assertEquals(true, okefastOnly.isOkefastEnabled)
+    }
+
+    @Test
+    fun driverDto_parsesEnableOkefastFromJson() {
+        val json = """{"id":1,"enable_driver_attendance":true,"enable_okefast":true}"""
+        val dto = com.google.gson.Gson().fromJson(json, DriverDto::class.java)
+
+        assertEquals(true, dto.enableDriverAttendance)
+        assertEquals(true, dto.enableOkefast)
+    }
+
+    @Test
     fun response_isSuccessful_acceptsLegacySuccessOrBaseStatus() {
         assertEquals(true, HomeDriverResponseDto(success = true).isSuccessful)
         assertEquals(true, HomeDriverResponseDto(status = true).isSuccessful)
@@ -60,7 +87,12 @@ class HomeDriverResponseDtoTest {
             ),
             queue = HomeQueueResponseDto(
                 success = true,
-                data = HomeQueueDataDto(queueNumber = 3, queueTerminal = "Terminal 1")
+                data = HomeQueueDataDto(
+                    queueNumber = 3,
+                    queueTerminal = "Terminal 1",
+                    queueTerminalTotal = 12,
+                    queueMessage = "Antrean aktif"
+                )
             ),
             currentOrder = HomeCurrentOrderResponseDto(
                 success = true,
@@ -76,12 +108,15 @@ class HomeDriverResponseDtoTest {
                         distanceBiddingRange = listOf(1, 2)
                     )
                 )
-            )
+            ),
+            queueEnabled = true
         )
 
         assertEquals("Tetap hati-hati di jalan", info.motd)
         assertEquals(3, info.queueNumber)
         assertEquals("Terminal 1", info.queueTerminal)
+        assertEquals(12, info.queueTerminalTotal)
+        assertEquals("Antrean aktif", info.queueMessage)
         assertEquals(true, info.hasQueueInfo)
         assertEquals(99L, info.activeOrderId)
         assertEquals(true, info.hasActiveOrder)
@@ -97,7 +132,8 @@ class HomeDriverResponseDtoTest {
             motd = HomeMotdResponseDto(success = false, data = HomeMotdDataDto(motd = "hidden")),
             queue = HomeQueueResponseDto(success = true, data = HomeQueueDataDto(queueNumber = 0)),
             currentOrder = HomeCurrentOrderResponseDto(success = true),
-            init = HomeInitResponseDto(success = false)
+            init = HomeInitResponseDto(success = false),
+            queueEnabled = true
         )
 
         assertEquals("", info.motd)

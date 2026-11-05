@@ -1,0 +1,9 @@
+Inter by Rasmus Andersson / The Inter Project Authors
+Source: https://github.com/google/fonts/tree/main/ofl/inter
+Font file: Inter[opsz,wght].ttf
+License: SIL Open Font License 1.1; see Inter-OFL.txt in this directory.
+
+Bundled instances generated with fontTools.varLib.instancer:
+  opsz=14, wght=400 (regular), 500 (medium), 600 (semibold), 700 (bold).
+Static instances support Android versions before variable-font support.
+The app bundles the font files; no font download is required at runtime.

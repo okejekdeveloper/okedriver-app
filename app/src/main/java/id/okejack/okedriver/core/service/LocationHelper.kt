@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
 import com.google.android.gms.location.LocationServices
@@ -28,7 +29,7 @@ object LocationHelper {
     }
 
     fun hasBackgroundLocationPermission(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
@@ -72,7 +73,7 @@ object LocationHelper {
         context: Context,
         onResult: (DriverLatLng?) -> Unit
     ) {
-        if (!hasForegroundLocationPermission(context)) {
+        if (!LocationAccess.canAccess(context)) {
             onResult(null)
             return
         }
@@ -80,6 +81,7 @@ object LocationHelper {
         LocationServices.getFusedLocationProviderClient(context)
             .lastLocation
             .addOnSuccessListener { location ->
+                if (!LocationAccess.canAccess(context)) { onResult(null); return@addOnSuccessListener }
                 if (location != null) {
                     onResult(
                         DriverLatLng(
@@ -101,13 +103,14 @@ object LocationHelper {
         context: Context,
         onResult: (DriverLatLng?) -> Unit
     ) {
+        if (!LocationAccess.canAccess(context)) { onResult(null); return }
         LocationServices.getFusedLocationProviderClient(context)
             .getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 CancellationTokenSource().token
             )
             .addOnSuccessListener { location ->
-                if (location != null) {
+                if (location != null && LocationAccess.canAccess(context)) {
                     onResult(
                         DriverLatLng(
                             latitude = location.latitude,
@@ -124,24 +127,30 @@ object LocationHelper {
     }
 
     fun startOnlineDriverService(context: Context) {
+        if (!LocationAccess.canAccess(context) || !isLocationEnabled(context)) return
+        LocationAccess.setTrackingRequested(context, true)
         val intent = Intent(context, OnlineDriverService::class.java).apply {
             action = OnlineDriverService.ACTION_START
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(context, intent)
-        } else {
-            context.startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(context, intent)
+            } else {
+                context.startService(intent)
+            }
+        } catch (e: SecurityException) {
+            Log.w("LocationHelper", "Location service permission unavailable", e)
+        } catch (e: IllegalStateException) {
+            Log.w("LocationHelper", "Location service cannot start from background", e)
         }
     }
 
     fun stopOnlineDriverService(context: Context) {
-        val intent = Intent(context, OnlineDriverService::class.java).apply {
-            action = OnlineDriverService.ACTION_OFFLINE
-        }
-        context.startService(intent)
+        LocationAccess.setTrackingRequested(context, false)
+        context.stopService(Intent(context, OnlineDriverService::class.java))
     }
 
-    private const val DEFAULT_LAT_LNG = "0.0.0.0"
+    private const val DEFAULT_LAT_LNG = "0.0,0.0"
 }
 
 data class DriverLatLng(

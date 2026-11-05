@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,23 +19,38 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import id.okejack.okedriver.core.designsystem.theme.OkeShapeButton
 
 private val THUMB_SIZE = 56.dp
 private val TRACK_HEIGHT = 64.dp
-private val CONFIRM_THRESHOLD = 0.85f
+
+object SlideConfirm {
+    const val THRESHOLD = 0.85f
+
+    /** A swipe only confirms once the thumb has travelled [THRESHOLD] of the track; a zero-width track never confirms. */
+    fun isConfirmed(offset: Float, maxDrag: Float): Boolean =
+        maxDrag > 0f && offset / maxDrag >= THRESHOLD
+}
 
 /**
- * Swipe-to-confirm button. Drag the thumb to the right past [CONFIRM_THRESHOLD] to trigger [onConfirm].
- * Snaps back if released before threshold.
+ * Swipe-to-confirm button. Drag the thumb to the right past [SlideConfirm.THRESHOLD] to trigger [onConfirm].
+ * Snaps back if released before threshold. Accessibility services can activate it directly, since swiping is
+ * not possible there; a deliberate screen-reader activation is not an accidental tap.
  */
 @Composable
 fun SlidingButton(
@@ -42,12 +58,16 @@ fun SlidingButton(
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    gradientColors: List<Color> = listOf(Color(0xFF10B981), Color(0xFF059669)),
+    gradientColors: List<Color> = listOf(MaterialTheme.colorScheme.primary),
     thumbIcon: ImageVector = Icons.Rounded.ChevronRight,
     thumbColor: Color = Color.White
 ) {
     val density = LocalDensity.current
     val thumbSizePx = with(density) { THUMB_SIZE.toPx() }
+    // The primary colour is light in dark mode, so white text is not always legible.
+    val trackText = if (!enabled) MaterialTheme.colorScheme.onSurface else
+        if (gradientColors.first().luminance() > 0.179f) Color.Black else Color.White
+    val thumbText = if (thumbColor.luminance() > 0.179f) Color.Black else Color.White
 
     var trackWidthPx by remember { mutableFloatStateOf(0f) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
@@ -77,21 +97,26 @@ fun SlidingButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(TRACK_HEIGHT)
-            .clip(RoundedCornerShape(TRACK_HEIGHT))
-            .background(
-                if (enabled) Brush.horizontalGradient(gradientColors)
-                else Brush.horizontalGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.2f)))
-            )
+            .heightIn(min = TRACK_HEIGHT)
+            .clip(OkeShapeButton)
+            .background(if (enabled) gradientColors.first() else MaterialTheme.colorScheme.surfaceVariant)
             .onSizeChanged { trackWidthPx = it.width.toFloat() }
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (enabled) onClick(label = label) { onConfirm(); true }
+                else disabled()
+            }
     ) {
         // Label
         Text(
             text = label,
-            color = Color.White,
+            color = trackText,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.Center)
+                .padding(start = 72.dp, end = 16.dp, top = 16.dp, bottom = 16.dp)
+                .fillMaxWidth()
                 .alpha(labelAlpha)
         )
 
@@ -99,15 +124,17 @@ fun SlidingButton(
         Box(
             modifier = Modifier
                 .padding(4.dp)
+                .align(Alignment.CenterStart)
                 .size(THUMB_SIZE)
                 .offset { IntOffset((if (confirmed) animatedOffset else dragOffsetX).roundToInt(), 0) }
-                .clip(CircleShape)
+                .clip(OkeShapeButton)
                 .background(thumbColor.copy(alpha = if (enabled) 1f else 0.5f))
                 .then(
-                    if (enabled) Modifier.pointerInput(Unit) {
+                    // Keyed on maxDrag: the track width is 0 on first composition, and a captured 0 would pin the thumb.
+                    if (enabled) Modifier.pointerInput(maxDrag) {
                         detectHorizontalDragGestures(
                             onDragEnd = {
-                                if (progress >= CONFIRM_THRESHOLD) {
+                                if (SlideConfirm.isConfirmed(dragOffsetX, maxDrag)) {
                                     confirmed = true
                                 } else {
                                     dragOffsetX = 0f
@@ -125,7 +152,7 @@ fun SlidingButton(
             Icon(
                 imageVector = thumbIcon,
                 contentDescription = label,
-                tint = if (enabled) gradientColors.first() else Color.Gray,
+                tint = if (enabled) thumbText else Color.Gray,
                 modifier = Modifier.size(28.dp)
             )
         }

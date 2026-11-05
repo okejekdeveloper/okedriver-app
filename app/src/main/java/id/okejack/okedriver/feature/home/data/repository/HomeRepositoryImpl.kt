@@ -9,6 +9,7 @@ import id.okejack.okedriver.feature.home.data.remote.dto.HomeQueueResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.HomeDriverResponseDto
 import id.okejack.okedriver.feature.home.data.remote.dto.toHomeDriver
 import id.okejack.okedriver.feature.home.data.remote.dto.toHomeSupportInfo
+import id.okejack.okedriver.feature.home.domain.model.AttendanceInfo
 import id.okejack.okedriver.feature.home.domain.model.HomeDriver
 import id.okejack.okedriver.feature.home.domain.model.HomeSupportInfo
 import id.okejack.okedriver.feature.home.domain.repository.HomeRepository
@@ -42,13 +43,16 @@ class HomeRepositoryImpl @Inject constructor(
         val currentOrder = (currentOrderResult as? ApiResponse.Success)?.data
         val init = (initResult as? ApiResponse.Success)?.data
 
-        val queueEnabled = driverResponse
-            ?.takeIf { it.isSuccessful }
-            ?.data?.driver?.enableDriverQueue
-            ?: false
+        val driverDto = driverResponse?.takeIf { it.isSuccessful }?.data?.driver
+        val queueEnabled = driverDto?.enableDriverQueue ?: false
+        val attendanceEnabled = driverDto?.enableDriverAttendance ?: false
 
         val queueResult = if (queueEnabled) safeApiCall { api.queueNumber(apiToken) } else null
-        val absenceResult = if (queueEnabled) safeApiCall { api.checkAbsenceStatus(apiToken) } else null
+        val absenceResult = if (queueEnabled || attendanceEnabled) {
+            safeApiCall { api.checkAbsenceStatus(apiToken) }
+        } else {
+            null
+        }
         val queue = (queueResult as? ApiResponse.Success)?.data
         val absence = (absenceResult as? ApiResponse.Success)?.data
 
@@ -61,7 +65,7 @@ class HomeRepositoryImpl @Inject constructor(
         }
 
         return ApiResponse.Success(
-            toHomeSupportInfo(motd, queue, currentOrder, init, absence, queueEnabled)
+            toHomeSupportInfo(motd, queue, currentOrder, init, absence, queueEnabled, attendanceEnabled)
         )
     }
 
@@ -86,30 +90,76 @@ class HomeRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun checkAttendance(): ApiResponse<Boolean> {
+    override suspend fun checkAttendance(): ApiResponse<AttendanceInfo> {
         val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
         if (apiToken.isBlank()) return ApiResponse.Error(401, "Session tidak valid")
+
         return when (val result = safeApiCall { api.checkAbsenceStatus(apiToken) }) {
             is ApiResponse.Success -> {
-                val attended = result.data.isSuccessful && result.data.data.driverStatus
-                ApiResponse.Success(attended)
+                if (!result.data.isSuccessful) {
+                    return ApiResponse.Error(400, attendanceErrorMessage(result.data.error, result.data.message))
+                }
+                val queue = safeApiCall { api.queueNumber(apiToken) }
+                ApiResponse.Success(
+                    attendanceInfo(
+                        hasAttended = result.data.data.driverStatus,
+                        queue = (queue as? ApiResponse.Success)?.data
+                    )
+                )
             }
             is ApiResponse.Error -> result
             ApiResponse.Loading -> ApiResponse.Loading
         }
     }
 
-    override suspend fun submitAttendance(): ApiResponse<Unit> {
+    override suspend fun submitAttendance(): ApiResponse<AttendanceInfo> {
         val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
         if (apiToken.isBlank()) return ApiResponse.Error(401, "Session tidak valid")
         return when (val result = safeApiCall { api.submitStatus(apiToken) }) {
             is ApiResponse.Success -> {
                 val dto = result.data
-                if (dto.isSuccessful) ApiResponse.Success(Unit)
-                else ApiResponse.Error(400, dto.errorMessage)
+                if (dto.isSuccessful || dto.error == "ATTENDANCE_ALREADY_RECORDED") {
+                    ApiResponse.Success(
+                        AttendanceInfo(
+                            hasAttended = true,
+                            queueNumber = dto.data.queueNumber,
+                            queueTerminal = dto.data.queueTerminal,
+                            queueTerminalTotal = dto.data.queueTerminalTotal,
+                            queueMessage = dto.data.queueMessage
+                        )
+                    )
+                } else {
+                    ApiResponse.Error(400, attendanceErrorMessage(dto.error, dto.message))
+                }
             }
             is ApiResponse.Error -> result
             ApiResponse.Loading -> ApiResponse.Loading
+        }
+    }
+
+    private fun attendanceInfo(
+        hasAttended: Boolean,
+        queue: HomeQueueResponseDto?
+    ): AttendanceInfo =
+        AttendanceInfo(
+            hasAttended = hasAttended,
+            queueNumber = queue?.takeIf { it.isSuccessful }?.data?.queueNumber,
+            queueTerminal = queue?.takeIf { it.isSuccessful }?.data?.queueTerminal,
+            queueTerminalTotal = queue?.takeIf { it.isSuccessful }?.data?.queueTerminalTotal,
+            queueMessage = queue?.takeIf { it.isSuccessful }?.data?.queueMessage.orEmpty()
+        )
+
+    private fun attendanceErrorMessage(error: String, message: String): String {
+        return when (error) {
+            "ATTENDANCE_ALREADY_RECORDED" -> "Anda sudah melakukan absensi hari ini"
+            "LOCATION_NOT_ALLOWED" -> message.ifBlank { "Lokasi Anda tidak berada di area absensi" }
+            "INSUFFICIENT_BALANCE" -> "Saldo oke driver anda tidak mencukupi, silahkan melakukan top up."
+            "OUTSIDE_WORKING_HOURS" -> "Absensi hanya dapat dilakukan pada jam kerja yang ditentukan"
+            "LOCATION_NOT_AVAILABLE" -> "Lokasi GPS tidak tersedia. Pastikan GPS aktif dan coba lagi."
+            "SESSION_NOT_VALID" -> "Sesi tidak valid. Silakan login ulang."
+            "INVALID_LOCATION_FORMAT", "INVALID_COORDINATES" ->
+                "Format lokasi GPS tidak valid. Silakan restart aplikasi."
+            else -> message.ifBlank { "Gagal menyimpan absensi. Silakan coba lagi." }
         }
     }
 
@@ -143,7 +193,7 @@ class HomeRepositoryImpl @Inject constructor(
         currentToken: String
     ): ApiResponse<HomeDriver> {
         if (!response.isSuccessful) {
-            return ApiResponse.Error(400, response.errorMessage)
+            return ApiResponse.Error(400, response.errorMessage, errorCode = response.error)
         }
 
         val driverDto = response.data.driver

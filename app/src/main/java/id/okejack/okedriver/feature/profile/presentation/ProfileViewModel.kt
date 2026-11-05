@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.okejack.okedriver.core.network.model.ApiResponse
 import id.okejack.okedriver.feature.auth.domain.usecase.LogoutUseCase
-import id.okejack.okedriver.feature.home.domain.model.HomeDriver
-import id.okejack.okedriver.feature.home.domain.usecase.GetDriverInfoUseCase
+import id.okejack.okedriver.feature.profile.domain.model.ProfileDriver
+import id.okejack.okedriver.feature.profile.domain.usecase.GetProfileUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val getDriverInfoUseCase: GetDriverInfoUseCase,
+    private val getProfileUseCase: GetProfileUseCase,
     private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
 
@@ -27,9 +27,11 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun loadProfile() {
+        if (_state.value.isLoading) return
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = getDriverInfoUseCase()) {
+            when (val result = getProfileUseCase()) {
                 is ApiResponse.Success -> {
                     _state.update {
                         it.copy(driver = result.data, isLoading = false, errorMessage = null)
@@ -46,6 +48,8 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout(onDone: () -> Unit) {
+        if (_state.value.isLoggingOut) return
+        _state.update { it.copy(isLoggingOut = true) }
         viewModelScope.launch {
             logoutUseCase()
             onDone()
@@ -54,7 +58,8 @@ class ProfileViewModel @Inject constructor(
 }
 
 data class ProfileUiState(
-    val driver: HomeDriver? = null,
+    val driver: ProfileDriver? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isLoggingOut: Boolean = false
 )

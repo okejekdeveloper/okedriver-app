@@ -1,8 +1,13 @@
 package id.okejack.okedriver.feature.order.presentation.components
 
+import id.okejack.okedriver.core.designsystem.component.DriverOutlinedButton as OutlinedButton
+import id.okejack.okedriver.core.designsystem.component.DriverTextButton as TextButton
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.content.ActivityNotFoundException
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,25 +17,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Chat
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.Payment
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -50,6 +55,14 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.feature.order.domain.model.DriverOrder
+import com.google.maps.android.compose.Polyline
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import id.okejack.okedriver.core.designsystem.component.LocalLocationConsent
+import id.okejack.okedriver.core.designsystem.component.SlidingButton
+import id.okejack.okedriver.core.designsystem.component.DriverCard
+import id.okejack.okedriver.core.designsystem.component.OkeButton
 
 private const val ORDER_MAP_ZOOM = 15f
 
@@ -65,24 +78,29 @@ fun OrderContent(
     onCancel: () -> Unit = {},
     onOpenChat: () -> Unit = {},
     onOpenEditShopping: () -> Unit = {},
-    onOpenPayments: () -> Unit = {}
+    onOpenPayments: () -> Unit = {},
+    showMap: Boolean = true,
+    showActions: Boolean = true
 ) {
     val context = LocalContext.current
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OrderHeroCard(
+        if (showMap) OrderHeroCard(
             order = order,
             onNavigate = { openMap(context, order.targetLatLng) }
         )
+        AddressCard(order = order)
+        if (order.driverInfo.isNotBlank()) {
+            InfoCard(title = "Catatan pelanggan", body = order.driverInfo)
+        }
         CustomerCard(
             order = order,
             onCall = { openDial(context, order.customerPhone) },
             onOpenChat = onOpenChat,
             showChatAction = showChatAction
         )
-        AddressCard(order = order)
         PaymentCard(
             order = order,
             showPaymentDetailAction = showPaymentDetailAction,
@@ -91,17 +109,39 @@ fun OrderContent(
         if (order.courier != null) {
             CourierCard(order = order)
         }
-        if (order.items.isNotEmpty()) {
+        if (order.items.isNotEmpty() || (isCurrentOrder && order.canEditShopping)) {
             ItemsCard(
                 order = order,
-                isCurrentOrder = isCurrentOrder,
+                isCurrentOrder = isCurrentOrder && order.canEditShopping,
                 onOpenEditShopping = onOpenEditShopping
             )
         }
-        if (order.driverInfo.isNotBlank()) {
-            InfoCard(title = "Catatan", body = order.driverInfo)
+        order.merchant?.let { merchant ->
+            ElevatedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(merchant.name, style = MaterialTheme.typography.titleMedium)
+                    Text(merchant.address)
+                    if (isCurrentOrder && merchant.phone.isNotBlank()) TextButton(onClick = { openDial(context, merchant.phone) }) { Text("Telepon merchant") }
+                }
+            }
         }
-        if (isCurrentOrder) {
+        if (order.expressVerificationCode.isNotBlank()) InfoCard("Kode verifikasi", order.expressVerificationCode)
+        order.packageInfo?.let { info ->
+            InfoCard("Paket ${info.name}", buildString {
+                append(info.description)
+                if (info.duration > 0) append("\nDurasi: ${info.duration} menit")
+                if (info.overtime > 0) append("\nTambahan waktu: ${info.overtime} menit (${CurrencyFormatter.rupiah(info.overtimeFee)})")
+            })
+        }
+        if (!isCurrentOrder) {
+            order.cancellation?.takeIf { order.status == DriverOrder.STATUS_CANCELLED }?.let {
+                InfoCard("Pembatalan", listOf(it.reason, it.cancelledAt).filter(String::isNotBlank).joinToString("\n"))
+            }
+            order.customerScore?.let {
+                InfoCard("Penilaian customer", listOf(when (it.score) { 2 -> "Baik"; 1 -> "Kurang baik"; else -> "Belum ada penilaian" }, it.review).filter(String::isNotBlank).joinToString("\n"))
+            }
+        }
+        if (isCurrentOrder && showActions) {
             CurrentOrderActions(
                 order = order,
                 isUpdatingStatus = isUpdatingStatus,
@@ -171,6 +211,9 @@ private fun OrderHeroCard(
 
 @Composable
 private fun OrderMap(order: DriverOrder) {
+    val mapViewModel: OrderMapViewModel = hiltViewModel()
+    val route by mapViewModel.route.collectAsStateWithLifecycle()
+    val locationConsent = LocalLocationConsent.current
     val target = remember(order.targetLatLng) { parseLatLng(order.targetLatLng) }
     if (target == null) {
         InfoCard(
@@ -189,6 +232,9 @@ private fun OrderMap(order: DriverOrder) {
             CameraUpdateFactory.newLatLngZoom(target, ORDER_MAP_ZOOM)
         )
     }
+    LaunchedEffect(order.id, order.status, order.targetLatLng, order.encodedRoute, locationConsent.granted) {
+        mapViewModel.load(order, locationConsent.granted)
+    }
 
     GoogleMap(
         modifier = Modifier
@@ -202,8 +248,9 @@ private fun OrderMap(order: DriverOrder) {
             mapToolbarEnabled = false
         )
     ) {
+        if (route.size > 1) Polyline(points = route.map { LatLng(it.latitude, it.longitude) }, color = MaterialTheme.colorScheme.primary, width = 8f)
         Marker(
-            state = MarkerState(position = target),
+            state = remember(target) { MarkerState(position = target) },
             title = order.targetAddress.ifBlank { "Tujuan order" }
         )
     }
@@ -220,25 +267,10 @@ private fun CustomerCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(12.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
                 Text(
-                    text = order.customerName.ifBlank { "Customer" },
+                    text = order.customerName.ifBlank { "Pelanggan" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -248,7 +280,9 @@ private fun CustomerCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            TextButton(onClick = onCall, enabled = order.customerPhone.isNotBlank()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onCall, enabled = order.customerPhone.isNotBlank(),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.Call,
                     contentDescription = null,
@@ -258,15 +292,16 @@ private fun CustomerCard(
                 Text("Telepon")
             }
             if (showChatAction) {
-                TextButton(onClick = onOpenChat) {
+                OutlinedButton(onClick = onOpenChat, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Chat,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text("Chat")
+                    Text("Pesan")
                 }
+            }
             }
         }
     }
@@ -386,12 +421,15 @@ private fun PaymentCard(
                     }
                 }
             }
-            AmountRow("Ongkir", CurrencyFormatter.rupiah(order.fee))
+            AmountRow("Ongkir", CurrencyFormatter.rupiah(order.totalFee))
             if (order.totalDiscount > java.math.BigDecimal.ZERO) {
                 AmountRow("Diskon", "-${CurrencyFormatter.rupiah(order.totalDiscount)}")
             }
             if (order.totalShopping > java.math.BigDecimal.ZERO) {
                 AmountRow("Belanja", CurrencyFormatter.rupiah(order.totalShopping))
+            }
+            if (order.originalTotalShopping > java.math.BigDecimal.ZERO) {
+                AmountRow("Bayar ke merchant", CurrencyFormatter.rupiah(order.originalTotalShopping))
             }
             if (order.serviceFee > java.math.BigDecimal.ZERO) {
                 AmountRow("Biaya layanan", CurrencyFormatter.rupiah(order.serviceFee))
@@ -434,6 +472,7 @@ private fun AmountRow(
 @Composable
 private fun CourierCard(order: DriverOrder) {
     val courier = order.courier ?: return
+    val context = LocalContext.current
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
@@ -450,6 +489,8 @@ private fun CourierCard(order: DriverOrder) {
             Text("Barang: ${courier.itemDetail.ifBlank { "-" }}")
             Text("Pengirim: ${courier.senderName.ifBlank { "-" }}")
             Text("Penerima: ${courier.recipientName.ifBlank { "-" }}")
+            if (courier.senderPhone.isNotBlank()) TextButton(onClick = { openDial(context, courier.senderPhone) }) { Text("Telepon pengirim") }
+            if (courier.recipientPhone.isNotBlank()) TextButton(onClick = { openDial(context, courier.recipientPhone) }) { Text("Telepon penerima") }
         }
     }
 }
@@ -546,29 +587,44 @@ private fun InfoCard(title: String, body: String) {
 }
 
 @Composable
-private fun CurrentOrderActions(
+fun CurrentOrderActions(
     order: DriverOrder,
     isUpdatingStatus: Boolean,
     isCancelling: Boolean,
     onUpdateStatus: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onOpenQris: (() -> Unit)? = null
 ) {
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(
-                onClick = onUpdateStatus,
+            if (order.requiresQrisPayment && onOpenQris != null) {
+                Text("Minta pelanggan memindai QRIS, lalu tunggu konfirmasi pembayaran.",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OkeButton("Tampilkan QRIS pembayaran", onOpenQris, enabled = !isUpdatingStatus && !isCancelling)
+            } else if (order.canUpdateStatus) {
+            Text(if (order.status == DriverOrder.STATUS_DEPARTED) "Pastikan pengantaran dan pembayaran sudah selesai."
+                else "Mulai setelah selesai menjemput.",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val primary = MaterialTheme.colorScheme.primary
+            SlidingButton(
+                label = when {
+                    isUpdatingStatus -> "Memproses..."
+                    order.status == DriverOrder.STATUS_DEPARTED -> "Geser untuk selesai"
+                    else -> "Geser untuk mulai"
+                },
+                onConfirm = onUpdateStatus,
                 enabled = order.canUpdateStatus && !isUpdatingStatus && !isCancelling,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (isUpdatingStatus) "Memproses..." else order.nextActionLabel)
+                gradientColors = listOf(primary, primary),
+                thumbIcon = Icons.Rounded.ChevronRight
+            )
             }
-            OutlinedButton(
+            if (order.canCancel) OutlinedButton(
                 onClick = onCancel,
                 enabled = order.canCancel && !isUpdatingStatus && !isCancelling,
                 modifier = Modifier.fillMaxWidth()
@@ -579,7 +635,7 @@ private fun CurrentOrderActions(
     }
 }
 
-private fun parseLatLng(value: String): LatLng? {
+internal fun parseLatLng(value: String): LatLng? {
     val parts = value.split(",")
     if (parts.size != 2) return null
     val latitude = parts[0].trim().toDoubleOrNull() ?: return null
@@ -597,19 +653,23 @@ private fun distanceLabel(distance: Int): String {
     }
 }
 
-private fun openMap(context: Context, latLng: String) {
+fun openMap(context: Context, latLng: String) {
     val target = parseLatLng(latLng) ?: return
     val value = "${target.latitude},${target.longitude}"
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:$value?z=14&q=$value")).apply {
         setPackage("com.google.android.apps.maps")
     }
-    if (intent.resolveActivity(context.packageManager) != null) {
+    try {
         context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$value"))) }
+        catch (ignored: ActivityNotFoundException) { Toast.makeText(context, "Aplikasi peta tidak tersedia", Toast.LENGTH_SHORT).show() }
     }
 }
 
-private fun openDial(context: Context, phone: String) {
+fun openDial(context: Context, phone: String) {
     if (phone.isBlank()) return
     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-    context.startActivity(intent)
+    try { context.startActivity(intent) }
+    catch (e: ActivityNotFoundException) { Toast.makeText(context, "Aplikasi telepon tidak tersedia", Toast.LENGTH_SHORT).show() }
 }

@@ -3,8 +3,13 @@ package id.okejack.okedriver.feature.order.data.remote
 import id.okejack.okedriver.feature.order.data.remote.dto.ChatMessagesResponseDto
 import id.okejack.okedriver.feature.order.data.remote.dto.EditShoppingItemRequestDto
 import id.okejack.okedriver.feature.order.data.remote.dto.EditShoppingItemsResponseDto
+import id.okejack.okedriver.feature.order.data.remote.dto.OkeFastCodeResponseDto
 import id.okejack.okedriver.feature.order.data.remote.dto.OrderResponseDto
 import id.okejack.okedriver.feature.order.data.remote.dto.OrdersListResponseDto
+import id.okejack.okedriver.feature.order.data.remote.dto.RecentOrdersResponseDto
+import id.okejack.okedriver.feature.order.data.remote.dto.OrderIdBody
+import id.okejack.okedriver.feature.order.data.remote.dto.OrderQrisResponseDto
+import id.okejack.okedriver.feature.order.data.remote.dto.ChatMessageBody
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -36,6 +41,15 @@ interface OrderApiService {
     @GET("order/update-status")
     suspend fun updateCurrentOrderStatus(@Query("api_token") apiToken: String): OrderResponseDto
 
+    @POST("order/qris")
+    suspend fun generateOrderQris(@Body body: OrderIdBody, @Query("api_token") apiToken: String): OrderQrisResponseDto
+
+    @POST("order/check-qris-status")
+    suspend fun checkOrderQrisStatus(@Body body: OrderIdBody, @Query("api_token") apiToken: String): OrderQrisResponseDto
+
+    @POST("order/switch-to-cash")
+    suspend fun switchOrderToCash(@Body body: OrderIdBody, @Query("api_token") apiToken: String): OrderQrisResponseDto
+
     @FormUrlEncoded
     @POST("order/cancel")
     suspend fun cancelCurrentOrder(
@@ -49,11 +63,10 @@ interface OrderApiService {
         @Query("api_token") apiToken: String
     ): ChatMessagesResponseDto
 
-    @FormUrlEncoded
     @POST("order/chats/{id}/submit")
     suspend fun submitChatMessage(
         @Path("id") orderId: Long,
-        @Field("content") content: String,
+        @Body body: ChatMessageBody,
         @Query("api_token") apiToken: String
     ): ChatMessagesResponseDto
 
@@ -63,4 +76,10 @@ interface OrderApiService {
         @Body body: EditShoppingItemRequestDto,
         @Query("api_token") apiToken: String
     ): EditShoppingItemsResponseDto
+
+    @GET("orders/recent-orders")
+    suspend fun recentOrders(@Query("api_token") apiToken: String): RecentOrdersResponseDto
+
+    @GET("order/okefast/generate-code")
+    suspend fun generateOkeFastCode(@Query("api_token") apiToken: String): OkeFastCodeResponseDto
 }

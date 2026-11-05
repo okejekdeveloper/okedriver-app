@@ -25,14 +25,16 @@ class CurrentOrderViewModel @Inject constructor(
     val state: StateFlow<CurrentOrderUiState> = _state
 
     fun loadOrder() {
+        if (_state.value.isLoading || _state.value.isUpdatingStatus || _state.value.isCancelling || _state.value.showQris) return
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = getCurrentOrderUseCase()) {
                 is ApiResponse.Success -> {
                     _state.update {
                         it.copy(
                             order = result.data,
                             isLoading = false,
+                            hasLoaded = true,
                             errorMessage = null
                         )
                     }
@@ -41,6 +43,8 @@ class CurrentOrderViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            hasLoaded = true,
+                            order = if (result.errorCode in listOf("order_not_available", "order_cancelled")) null else it.order,
                             errorMessage = result.message
                         )
                     }
@@ -51,8 +55,14 @@ class CurrentOrderViewModel @Inject constructor(
     }
 
     fun updateStatus(onFinished: (Long) -> Unit) {
+        val state = _state.value
+        if (state.isLoading || state.isUpdatingStatus || state.isCancelling || state.order?.canUpdateStatus != true) return
+        if (state.order.requiresQrisPayment) {
+            _state.update { it.copy(showQris = true, finishAfterQris = true) }
+            return
+        }
+        _state.update { it.copy(isUpdatingStatus = true, errorMessage = null) }
         viewModelScope.launch {
-            _state.update { it.copy(isUpdatingStatus = true, errorMessage = null) }
             when (val result = updateCurrentOrderStatusUseCase()) {
                 is ApiResponse.Success -> {
                     _state.update {
@@ -70,7 +80,9 @@ class CurrentOrderViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isUpdatingStatus = false,
-                            errorMessage = result.message
+                            errorMessage = result.message,
+                            showQris = (result.errorCode == "payment_failed" || result.message == "payment_failed") && it.order?.paymentProvider == "qris",
+                            finishAfterQris = (result.errorCode == "payment_failed" || result.message == "payment_failed") && it.order?.paymentProvider == "qris"
                         )
                     }
                 }
@@ -79,10 +91,14 @@ class CurrentOrderViewModel @Inject constructor(
         }
     }
 
-    fun cancelOrder(onCancelled: () -> Unit) {
+    fun cancelOrder(
+        reasonCode: Int = DriverOrder.CANCEL_REASON_NO_CONTACT,
+        onCancelled: () -> Unit
+    ) {
+        if (_state.value.isLoading || _state.value.isUpdatingStatus || _state.value.isCancelling || _state.value.order?.canCancel != true) return
+        _state.update { it.copy(isCancelling = true, errorMessage = null) }
         viewModelScope.launch {
-            _state.update { it.copy(isCancelling = true, errorMessage = null) }
-            when (val result = cancelCurrentOrderUseCase(DriverOrder.CANCEL_REASON_NO_CONTACT)) {
+            when (val result = cancelCurrentOrderUseCase(reasonCode)) {
                 is ApiResponse.Success -> {
                     _state.update {
                         it.copy(
@@ -104,6 +120,37 @@ class CurrentOrderViewModel @Inject constructor(
             }
         }
     }
+
+    fun openQris() {
+        if (_state.value.order?.requiresQrisPayment == true && !_state.value.isUpdatingStatus) {
+            _state.update { it.copy(showQris = true, finishAfterQris = false) }
+        }
+    }
+
+    fun closeQris() {
+        _state.update { it.copy(showQris = false, finishAfterQris = false) }
+        loadOrder()
+    }
+
+    fun onQrisComplete(onFinished: (Long) -> Unit) {
+        val expectedOrderId = _state.value.order?.id ?: return
+        val finishRequested = _state.value.finishAfterQris
+        _state.update { it.copy(showQris = false, finishAfterQris = false, isLoading = true) }
+        viewModelScope.launch {
+            when (val result = getCurrentOrderUseCase()) {
+                is ApiResponse.Success -> {
+                    _state.update { it.copy(order = result.data, isLoading = false, errorMessage = null) }
+                    // Reload server state before finishing; prepayment only refreshes the screen.
+                    if (result.data.id == expectedOrderId && finishRequested && !result.data.requiresQrisPayment) {
+                        if (result.data.status == DriverOrder.STATUS_ARRIVED) onFinished(result.data.id)
+                        else updateStatus(onFinished)
+                    }
+                }
+                is ApiResponse.Error -> _state.update { it.copy(isLoading = false, errorMessage = result.message) }
+                ApiResponse.Loading -> _state.update { it.copy(isLoading = false) }
+            }
+        }
+    }
 }
 
 data class CurrentOrderUiState(
@@ -111,5 +158,8 @@ data class CurrentOrderUiState(
     val isLoading: Boolean = false,
     val isUpdatingStatus: Boolean = false,
     val isCancelling: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showQris: Boolean = false,
+    val finishAfterQris: Boolean = false,
+    val hasLoaded: Boolean = false
 )

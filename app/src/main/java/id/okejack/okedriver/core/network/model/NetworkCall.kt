@@ -2,10 +2,13 @@ package id.okejack.okedriver.core.network.model
 
 import java.io.IOException
 import retrofit2.HttpException
+import kotlinx.coroutines.CancellationException
 
 suspend fun <T> safeApiCall(block: suspend () -> T): ApiResponse<T> {
     return try {
         ApiResponse.Success(block())
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: HttpException) {
         ApiResponse.Error(e.code(), e.message())
     } catch (e: IOException) {

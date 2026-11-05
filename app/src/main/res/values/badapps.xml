@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="bad_apps" translatable="false">
+        <item>com.gojek.driver.bike</item>
+        <item>com.gojek.driver.car</item>
+        <item>com.gojek.driver.car</item>
+        <item>com.gojek.driver.kilat</item>
+        <item>com.grabtaxi.driver2</item>
+        <item>com.ubercab.driver</item>
+        <item>com.remboz.app.driverpesanini</item>
+        <item>com.oktrans.okdriverapp</item>
+        <item>com.kotektak.anterin</item>
+    </string-array>
+</resources>

@@ -35,6 +35,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import android.os.SystemClock
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -45,14 +47,16 @@ class OnlineDriverService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var pushLocationJob: Job? = null
-    private var currentLatitude: Double? = null
-    private var currentLongitude: Double? = null
+    private var sessionWatchJob: Job? = null
+    private var isTracking = false
+    @Volatile private var currentLocation: DriverLatLng? = null
+    @Volatile private var lastLocationElapsedNanos: Long = 0L
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val location = result.lastLocation ?: return
-            currentLatitude = location.latitude
-            currentLongitude = location.longitude
+            currentLocation = DriverLatLng(location.latitude, location.longitude)
+            lastLocationElapsedNanos = location.elapsedRealtimeNanos
         }
     }
 
@@ -83,24 +87,52 @@ class OnlineDriverService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startTracking() {
-        if (!LocationHelper.hasForegroundLocationPermission(this) || !LocationHelper.isLocationEnabled(this)) {
-            Log.w(TAG, "Location permission or provider unavailable; stopping service")
+        // startForegroundService() obliges us to call startForeground() before any early exit,
+        // otherwise the system throws ForegroundServiceDidNotStartInTimeException.
+        try {
+            startForegroundCompat(buildNotification())
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Location service permission unavailable", e)
+            stopSelf()
+            return
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Location service cannot start in current app state", e)
             stopSelf()
             return
         }
 
-        startForegroundCompat(buildNotification())
+        if (!LocationAccess.canAccess(this) || !LocationAccess.trackingRequested(this) || !LocationHelper.isLocationEnabled(this)) {
+            Log.w(TAG, "Location permission or provider unavailable; stopping service")
+            stopTracking()
+            stopSelf()
+            return
+        }
+        if (isTracking) return
+        isTracking = true
         startLocationUpdates()
         startLocationPushLoop()
+        sessionWatchJob = serviceScope.launch {
+            combine(sessionDataStore.token, sessionDataStore.driverOnline) { token, online ->
+                !token.isNullOrBlank() && online
+            }.collect { shouldTrack ->
+                if (!shouldTrack) stopSelf()
+            }
+        }
     }
 
     private fun stopTracking() {
         pushLocationJob?.cancel()
         pushLocationJob = null
+        sessionWatchJob?.cancel()
+        sessionWatchJob = null
+        isTracking = false
+        currentLocation = null
+        lastLocationElapsedNanos = 0L
         if (::fusedLocationClient.isInitialized) {
             fusedLocationClient.removeLocationUpdates(locationCallback)
         }
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE)
+        else @Suppress("DEPRECATION") stopForeground(true)
     }
 
     @SuppressLint("MissingPermission")
@@ -112,11 +144,22 @@ class OnlineDriverService : Service() {
             .setMinUpdateIntervalMillis(LOCATION_FASTEST_INTERVAL_MS)
             .build()
 
-        fusedLocationClient.requestLocationUpdates(
-            request,
-            locationCallback,
-            Looper.getMainLooper()
-        )
+        try {
+            fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+                .addOnFailureListener { error ->
+                    Log.w(TAG, "Location updates unavailable", error)
+                    stopSelf()
+                }
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null && currentLocation == null) {
+                    currentLocation = DriverLatLng(location.latitude, location.longitude)
+                    lastLocationElapsedNanos = location.elapsedRealtimeNanos
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Location permission revoked", e)
+            stopSelf()
+        }
     }
 
     private fun startLocationPushLoop() {
@@ -131,22 +174,24 @@ class OnlineDriverService : Service() {
     }
 
     private suspend fun pushCurrentLocation() {
-        val latitude = currentLatitude ?: return
-        val longitude = currentLongitude ?: return
         val token = sessionDataStore.token.firstOrNull().orEmpty()
-        if (token.isBlank()) {
-            Log.w(TAG, "Missing session token; skip location push")
+        if (!LocationTrackingPolicy.canTrack(LocationAccess.acceptedVersion(this),
+                LocationHelper.hasForegroundLocationPermission(this), LocationAccess.trackingRequested(this),
+                sessionDataStore.driverOnline.firstOrNull() == true, token)) {
+            stopSelf()
             return
         }
+        val location = currentLocation ?: return
+        if ((SystemClock.elapsedRealtimeNanos() - lastLocationElapsedNanos) / 1_000_000 > 120_000) return
 
         val body = JsonObject().apply {
-            addProperty("last_position", "$latitude,$longitude")
+            addProperty("last_position", location.asApiValue())
         }
 
         val result = safeApiCall {
             driverApiService.updateLocation(body, token)
         }
-        Log.d(TAG, "Location push result: $result")
+        Log.d(TAG, "Location push completed: ${result.javaClass.simpleName}")
     }
 
     private fun startForegroundCompat(notification: Notification) {
@@ -172,8 +217,8 @@ class OnlineDriverService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, NotificationChannelUtils.LOCATION_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+        return NotificationCompat.Builder(this, NotificationChannelUtils.locationChannel(this))
+            .withDriverBrand(this)
             .setContentTitle("OkeDriver Online")
             .setContentText("Lokasi driver sedang dikirim")
             .setContentIntent(pendingIntent)

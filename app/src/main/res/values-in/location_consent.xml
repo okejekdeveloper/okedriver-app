@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="action_deny">Tolak</string>
+<string name="location_tracking_warning">Oke Driver mengakses lokasi (GPS) Anda saat aplikasi dibuka untuk menampilkan posisi Anda di peta.\n\nSaat status \'Online\', Oke Driver mengumpulkan dan mengirim lokasi Anda ke server kami, termasuk saat aplikasi ditutup atau tidak sedang digunakan, untuk mencocokkan Anda dengan order terdekat dan memantau perjalanan order.\n\nSaat menjalankan order, lokasi Anda dibagikan kepada pelanggan untuk memantau perjalanan pesanan.\n\nSaat status \'Offline\', lokasi Anda tidak dikirim ke server, kecuali saat Anda melakukan absensi atau mendaftar antrian untuk memverifikasi lokasi Anda.\n\nPelacakan Online berhenti saat Anda memilih Offline. Dengan menekan \'Setuju\', Anda menyetujui penggunaan data lokasi tersebut.</string>
+<string name="location_tracking_warning_title">Pengumpulan Data Lokasi</string>
+<string name="action_agree">Setuju</string>
+<string name="background_location_disclosure_title">Lokasi saat aplikasi ditutup</string>
+<string name="background_location_disclosure">Agar status \'Online\' Anda dilanjutkan otomatis setelah perangkat dihidupkan ulang, Oke Driver perlu mengakses lokasi Anda sepanjang waktu (\"Selalu izinkan\"), termasuk saat aplikasi ditutup atau tidak sedang digunakan.\n\nLokasi hanya dikirim ke server kami saat status Anda \'Online\', untuk mencocokkan Anda dengan order terdekat dan memantau perjalanan order. Saat \'Offline\', lokasi tidak dikirim.\n\nIzin ini bersifat opsional. Tanpa izin ini, Anda tetap bisa Online, tetapi harus membuka aplikasi secara manual setelah perangkat dihidupkan ulang. Anda dapat mencabutnya kapan saja di Pengaturan perangkat.\n\nSetelah menekan \'Setuju\', Anda akan diarahkan untuk memilih izin lokasi.</string>
+</resources>

@@ -1,5 +1,7 @@
 package id.okejack.okedriver.feature.wallet.data.remote.dto
 
+import id.okejack.okedriver.core.network.model.ServerErrors
+
 import com.google.gson.annotations.SerializedName
 import id.okejack.okedriver.feature.wallet.domain.model.WalletBalance
 import java.math.BigDecimal
@@ -12,7 +14,7 @@ data class BalanceResponseDto(
     val data: BalanceDataDto? = null
 ) {
     val isSuccessful: Boolean get() = success || status
-    val errorMessage: String get() = error.ifBlank { message.ifBlank { "Gagal memuat saldo" } }
+    val errorMessage: String get() = ServerErrors.message(error, message, "Gagal memuat saldo")
 }
 
 data class BalanceDataDto(
