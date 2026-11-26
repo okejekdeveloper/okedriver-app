@@ -1,5 +1,6 @@
 package id.okejack.okedriver.core.network.retrofit
 
+import android.util.Log
 import id.okejack.okedriver.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -13,7 +14,8 @@ fun buildOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient =
     OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(
-            HttpLoggingInterceptor().apply {
+            HttpLoggingInterceptor { message -> Log.i("OkHttp", LogRedactor.redact(message)) }.apply {
+                redactHeader("Authorization")
                 level = if (BuildConfig.DEBUG)
                     HttpLoggingInterceptor.Level.BODY
                 else

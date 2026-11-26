@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Play Store artwork is the 72dp window an adaptive icon shows, so it sits in the middle
+  66.7% of the 108dp canvas. The art's own background (#762E7A) equals the background layer,
+  so the area around it blends in. A percentage inset keeps the proportion at any launcher size.
+-->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/oke_driver_mark"
-    android:insetLeft="21dp"
-    android:insetTop="21dp"
-    android:insetRight="21dp"
-    android:insetBottom="21dp" />
+    android:drawable="@drawable/ic_launcher_art"
+    android:inset="16.667%" />

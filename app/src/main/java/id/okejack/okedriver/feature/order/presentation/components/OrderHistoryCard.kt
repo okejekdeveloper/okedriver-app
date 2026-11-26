@@ -28,7 +28,7 @@ fun OrderHistoryCard(order: DriverOrder, onClick: () -> Unit, modifier: Modifier
             Text("Tujuan: ${order.destinationAddress.ifBlank { "Alamat belum tersedia" }}", style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(if (order.distance > 0) "%.1f km".format(java.util.Locale("id", "ID"), order.distance / 1000.0) else "Jarak belum tersedia",
+                Text(formatOrderDistance(order.distance),
                     Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(CurrencyFormatter.rupiah(order.totalPaid), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.End)

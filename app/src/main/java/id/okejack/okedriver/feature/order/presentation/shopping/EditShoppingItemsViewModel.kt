@@ -114,7 +114,7 @@ class EditShoppingItemsViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = editShoppingItemsUseCase(s.orderId, s.items)) {
                 is ApiResponse.Success -> {
-                    _state.update { it.copy(isSubmitting = false, isDirty = false) }
+                    _state.update { it.copy(isSubmitting = false, isDirty = false, isAlreadyEdited = true) }
                     onSuccess()
                 }
                 is ApiResponse.Error -> _state.update {

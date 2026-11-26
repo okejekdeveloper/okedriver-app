@@ -1,6 +1,7 @@
 package id.okejack.okedriver.feature.order.data.remote.dto
 
 import id.okejack.okedriver.core.network.model.ServerErrors
+import id.okejack.okedriver.core.network.model.ApiResponse
 
 import id.okejack.okedriver.feature.order.domain.model.OrderLineItem
 import java.math.BigDecimal
@@ -15,6 +16,11 @@ data class EditShoppingItemsResponseDto(
     val isSuccessful: Boolean get() = success || status
     val errorMessage: String get() = ServerErrors.message(error, message, "Gagal menyimpan item")
 }
+
+// The edit endpoint acknowledges the save; it does not have to return an order.
+fun EditShoppingItemsResponseDto.toSaveResult(): ApiResponse<Unit> =
+    if (isSuccessful) ApiResponse.Success(Unit)
+    else ApiResponse.Error(400, errorMessage, errorCode = error)
 
 data class EditShoppingItemRequestDto(
     val items: List<ShoppingItemDto>

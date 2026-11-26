@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.activity.compose.BackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.designsystem.theme.*
@@ -43,6 +44,13 @@ fun EditShoppingItemsScreen(
     var showItemDialog by remember { mutableStateOf(false) }
     var showFeeDialog by remember { mutableStateOf<AddType?>(null) }
     var showDeleteConfirm by remember { mutableStateOf<Int?>(null) }
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    val requestBack = {
+        if (state.isDirty) showDiscardConfirm = true else onBackClick()
+    }
+    BackHandler(enabled = state.isDirty || state.isSubmitting) {
+        if (!state.isSubmitting) requestBack()
+    }
 
     LaunchedEffect(orderId) { viewModel.loadOrder(orderId) }
 
@@ -58,34 +66,16 @@ fun EditShoppingItemsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Item Belanja", fontWeight = FontWeight.Bold) },
+                title = { Text("Item & Biaya Tambahan", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = requestBack, enabled = !state.isSubmitting) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                actions = {
-                    if (!state.isAlreadyEdited && state.isDirty) {
-                        TextButton(
-                            onClick = { viewModel.submitItems(onSuccess = onBackClick) },
-                            enabled = !state.isSubmitting
-                        ) {
-                            if (state.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = OkePrimary
-                                )
-                            } else {
-                                Text("Simpan", color = OkePrimary, fontWeight = FontWeight.Bold)
-                            }
-                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            if (!state.isAlreadyEdited && !state.isLoading) {
+            if (!state.isAlreadyEdited && !state.isLoading && !state.isSubmitting) {
                 FloatingActionButton(
                     onClick = { showAddTypeSheet = true },
                     containerColor = OkePrimary
@@ -94,7 +84,24 @@ fun EditShoppingItemsScreen(
                 }
             }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (state.isDirty && !state.isAlreadyEdited) {
+                Surface(tonalElevation = 3.dp) {
+                    Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Perubahan hanya dapat disimpan satu kali. Periksa semua item dan biaya sebelum menyimpan.",
+                            style = MaterialTheme.typography.bodySmall)
+                        id.okejack.okedriver.core.designsystem.component.OkeButton(
+                            text = "Simpan perubahan",
+                            onClick = { viewModel.submitItems(onSuccess = onBackClick) },
+                            enabled = !state.isSubmitting,
+                            isLoading = state.isSubmitting
+                        )
+                    }
+                }
+            }
+        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -153,7 +160,7 @@ fun EditShoppingItemsScreen(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "Ada perubahan yang belum disimpan",
+                                    text = "Belum terkirim. Ketuk Simpan perubahan di bawah.",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = OkePrimary
                                 )
@@ -198,7 +205,7 @@ fun EditShoppingItemsScreen(
                                 itemsIndexed(items = state.items, key = { i, _ -> i }) { index, item ->
                                     ShoppingItemCard(
                                         item = item,
-                                        readOnly = state.isAlreadyEdited,
+                                        readOnly = state.isAlreadyEdited || state.isSubmitting,
                                         onEdit = {
                                             editingIndex = index
                                             if (item.isFeeType) showFeeDialog = AddType.ITEM
@@ -240,6 +247,20 @@ fun EditShoppingItemsScreen(
                 }
             }
         }
+    }
+
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text("Keluar tanpa menyimpan?") },
+            text = { Text("Perubahan item dan biaya tambahan belum dikirim.") },
+            confirmButton = {
+                TextButton(onClick = { showDiscardConfirm = false; onBackClick() }) { Text("Keluar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) { Text("Periksa lagi") }
+            }
+        )
     }
 
     // ── Add type bottom sheet ─────────────────────────────────────────────
@@ -422,8 +443,8 @@ private fun AddTypeOption(label: String, icon: androidx.compose.ui.graphics.vect
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(icon, contentDescription = null, tint = OkePrimary)
-            Text(label, color = OkeTextPrimary, style = MaterialTheme.typography.bodyLarge)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(label, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -495,7 +516,7 @@ private fun ItemFormDialog(
                     if (name.isNotBlank() && qty >= 1)
                         onConfirm(name.trim(), detail.trim(), qty, p)
                 }
-            ) { Text("Simpan", color = OkePrimary, fontWeight = FontWeight.Bold) }
+            ) { Text(if (initial == null) "Tambahkan ke daftar" else "Ubah di daftar", color = OkePrimary, fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Batal") }
@@ -533,7 +554,7 @@ private fun FeeFormDialog(
                     val p = price.toBigDecimalOrNull() ?: BigDecimal.ZERO
                     if (p > BigDecimal.ZERO) onConfirm(p)
                 }
-            ) { Text("Simpan", color = OkePrimary, fontWeight = FontWeight.Bold) }
+            ) { Text("Terapkan ke daftar", color = OkePrimary, fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Batal") }

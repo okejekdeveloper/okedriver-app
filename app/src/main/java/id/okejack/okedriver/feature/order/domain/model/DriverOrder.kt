@@ -13,6 +13,7 @@ data class DriverOrder(
     val destinationAddress: String,
     val originAddressDetail: String,
     val destinationAddressDetail: String,
+    /** Whole kilometres, as the order API sends it; 0 means unknown. Format with formatOrderDistance. */
     val distance: Int,
     val fee: BigDecimal,
     val originalFee: BigDecimal,

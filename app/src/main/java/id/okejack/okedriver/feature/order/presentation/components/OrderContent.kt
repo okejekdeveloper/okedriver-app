@@ -334,7 +334,7 @@ private fun AddressCard(order: DriverOrder) {
                 detail = order.destinationAddressDetail
             )
             Text(
-                text = distanceLabel(order.distance),
+                text = formatOrderDistance(order.distance),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -642,15 +642,6 @@ internal fun parseLatLng(value: String): LatLng? {
     val longitude = parts[1].trim().toDoubleOrNull() ?: return null
     if (latitude == 0.0 && longitude == 0.0) return null
     return LatLng(latitude, longitude)
-}
-
-private fun distanceLabel(distance: Int): String {
-    if (distance <= 0) return "Jarak belum tersedia"
-    return if (distance >= 1000) {
-        "%.1f km".format(distance / 1000.0)
-    } else {
-        "$distance m"
-    }
 }
 
 fun openMap(context: Context, latLng: String) {

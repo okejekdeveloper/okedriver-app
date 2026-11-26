@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,9 +43,10 @@ fun DriverCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
 }
 
 @Composable
-fun DriverMenuRow(icon: ImageVector, title: String, subtitle: String = "", onClick: () -> Unit) {
+fun DriverMenuRow(icon: ImageVector, title: String, subtitle: String = "", onClick: () -> Unit,
+    titleColor: Color? = null) {
     if (LocalDriverUiStyle.current == DriverUiStyle.DYNAMIC) {
-        DynamicMenuRow(icon, title, subtitle, onClick)
+        DynamicMenuRow(icon, title, subtitle, onClick, titleColor)
         return
     }
     Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
@@ -52,7 +54,8 @@ fun DriverMenuRow(icon: ImageVector, title: String, subtitle: String = "", onCli
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                    color = titleColor ?: Color.Unspecified)
                 if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

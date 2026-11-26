@@ -8,7 +8,7 @@ import id.okejack.okedriver.core.database.order.OrderEntity
 @Database(
     entities = [OrderEntity::class],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class OkeDriverDatabase : RoomDatabase() {
     abstract fun orderDao(): OrderDao

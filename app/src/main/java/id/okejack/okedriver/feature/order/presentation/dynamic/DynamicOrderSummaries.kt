@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.designsystem.component.dynamic.*
 import id.okejack.okedriver.feature.order.domain.model.DriverOrder
+import id.okejack.okedriver.feature.order.presentation.components.formatOrderDistance
 
 @Composable
 private fun OrderServiceBadge(order: DriverOrder) {
@@ -41,11 +42,8 @@ fun DynamicIncomingSummary(order: DriverOrder) {
         Text("Total pembayaran pelanggan", style = MaterialTheme.typography.bodyLarge)
         Text(CurrencyFormatter.rupiah(order.totalPaid), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Text(order.paymentProviderName.ifBlank { "Lihat detail pembayaran" }, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(when {
-            order.distance >= 1000 -> "%.1f km perjalanan".format(java.util.Locale("id", "ID"), order.distance / 1000.0)
-            order.distance > 0 -> "${order.distance} m perjalanan"
-            else -> "Jarak belum tersedia"
-        }, style = MaterialTheme.typography.bodyLarge)
+        Text(formatOrderDistance(order.distance).let { if (order.distance > 0) "$it perjalanan" else it },
+            style = MaterialTheme.typography.bodyLarge)
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -29,14 +30,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import id.okejack.okedriver.feature.news.presentation.NewsArtwork
+import id.okejack.okedriver.feature.news.presentation.NewsMetadata
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +54,8 @@ fun NewsDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(newsId) { viewModel.load(newsId) }
 
     Scaffold(
@@ -59,7 +68,8 @@ fun NewsDetailScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
@@ -74,33 +84,25 @@ fun NewsDetailScreen(
                 else -> {
                     val news = state.news!!
                     Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        modifier = Modifier.widthIn(max = 680.dp).fillMaxSize()
+                            .align(Alignment.TopCenter).verticalScroll(rememberScrollState()).padding(top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         if (news.imageUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = news.imageUrl,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                                contentScale = ContentScale.Crop
-                            )
+                            NewsArtwork(news.imageUrl,
+                                Modifier.padding(horizontal = 20.dp).fillMaxWidth().aspectRatio(16f / 9f))
                         }
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            NewsMetadata(news)
                             Text(
                                 text = news.title,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            if (news.createdAt.isNotBlank()) {
-                                Text(
-                                    news.createdAt,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             SelectionContainer {
                                 Text(
                                     text = news.readableContent(),
@@ -109,7 +111,11 @@ fun NewsDetailScreen(
                             }
                             if (news.actionUrl.isNotBlank()) {
                                 Button(
-                                    onClick = { runCatching { uriHandler.openUri(news.actionUrl) } },
+                                    onClick = {
+                                        runCatching { uriHandler.openUri(news.actionUrl) }.onFailure {
+                                            scope.launch { snackbar.showSnackbar("Tautan tidak dapat dibuka") }
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(Icons.Rounded.OpenInNew, contentDescription = null)

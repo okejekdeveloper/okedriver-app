@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.designsystem.component.*
 import id.okejack.okedriver.core.designsystem.theme.OkeSuccess
+import id.okejack.okedriver.core.designsystem.theme.balanceAccent
+import id.okejack.okedriver.core.designsystem.theme.menuTitleAccent
 import id.okejack.okedriver.feature.home.domain.model.QueueLocations
 import id.okejack.okedriver.feature.home.presentation.HomeActions
 import id.okejack.okedriver.feature.home.presentation.HomeDashboardLayout
@@ -64,7 +66,8 @@ fun SimpleHomeContent(state: HomePresentation, actions: HomeActions, mapContent:
                         Column(Modifier.weight(1f)) {
                             Text("Saldo Anda", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(driver?.let { CurrencyFormatter.rupiah(it.balance) } ?: "Belum tersedia",
-                                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.balanceAccent)
                         }
                         Icon(Icons.Rounded.ChevronRight, "Lihat saldo")
                     }
@@ -89,11 +92,13 @@ fun SimpleHomeContent(state: HomePresentation, actions: HomeActions, mapContent:
                     }
                 }
                 DriverCard {
-                    Text("Menu kerja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    DriverMenuRow(Icons.Rounded.Explore, "Peta order sekitar", "Lihat order terbaru di sekitar Anda", onOpenRecentOrders)
-                    if (driver?.isOkefastEnabled == true) DriverMenuRow(Icons.Rounded.LocalShipping, "OkeFast", "Buat kode pengiriman", onOpenOkeFast)
-                    DriverMenuRow(Icons.Rounded.Newspaper, "Info dari kantor", "Berita dan pengumuman driver", onOpenNews)
-                    DriverMenuRow(Icons.Rounded.Tune, "Pengaturan", "Atur order dan izin aplikasi", onOpenSettings)
+                    val menuAccent = MaterialTheme.colorScheme.menuTitleAccent
+                    Text("Menu kerja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface)
+                    DriverMenuRow(Icons.Rounded.Explore, "Peta order sekitar", "Lihat order terbaru di sekitar Anda", onOpenRecentOrders, menuAccent)
+                    if (driver?.isOkefastEnabled == true) DriverMenuRow(Icons.Rounded.LocalShipping, "OkeFast", "Buat kode pengiriman", onOpenOkeFast, menuAccent)
+                    DriverMenuRow(Icons.Rounded.Newspaper, "Info dari kantor", "Berita dan pengumuman driver", onOpenNews, menuAccent)
+                    DriverMenuRow(Icons.Rounded.Tune, "Pengaturan", "Atur order dan izin aplikasi", onOpenSettings, menuAccent)
                 }
                 if (supportInfo.motd.isNotBlank()) DriverNotice(supportInfo.motd)
                 if (updateLabel != null) DriverNotice("Versi baru tersedia: $updateLabel", "Perbarui aplikasi", onUpdate)

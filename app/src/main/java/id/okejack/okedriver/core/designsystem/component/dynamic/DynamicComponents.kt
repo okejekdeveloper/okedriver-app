@@ -71,7 +71,7 @@ fun DynamicDriverCard(modifier: Modifier = Modifier, content: @Composable Column
 }
 
 @Composable
-fun DynamicMenuRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+fun DynamicMenuRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit, titleColor: Color? = null) {
     val interaction = remember { MutableInteractionSource() }
     Surface(onClick = onClick, interactionSource = interaction, color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxWidth()) {
@@ -79,7 +79,8 @@ fun DynamicMenuRow(icon: ImageVector, title: String, subtitle: String, onClick: 
             horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                    color = titleColor ?: Color.Unspecified)
                 if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

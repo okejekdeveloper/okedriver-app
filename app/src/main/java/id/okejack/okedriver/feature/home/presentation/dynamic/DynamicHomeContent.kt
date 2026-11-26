@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.designsystem.component.*
 import id.okejack.okedriver.core.designsystem.component.dynamic.*
+import id.okejack.okedriver.core.designsystem.theme.balanceAccent
+import id.okejack.okedriver.core.designsystem.theme.menuTitleAccent
 import id.okejack.okedriver.feature.home.domain.model.QueueLocations
 import id.okejack.okedriver.feature.home.presentation.HomeActions
 import id.okejack.okedriver.feature.home.presentation.HomeDashboardLayout
@@ -62,7 +64,8 @@ fun DynamicHomeContent(state: HomePresentation, actions: HomeActions, mapContent
                     Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Saldo Anda", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(driver?.balance?.let(CurrencyFormatter::rupiah) ?: "Belum tersedia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(driver?.balance?.let(CurrencyFormatter::rupiah) ?: "Belum tersedia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.balanceAccent)
                         }
                         Icon(Icons.Rounded.ChevronRight, "Lihat saldo", tint = MaterialTheme.colorScheme.primary)
                     }
@@ -99,10 +102,12 @@ private fun DynamicWorkMenu(state: HomePresentation, actions: HomeActions) {
         add(Item(Icons.Rounded.Newspaper, "Info kantor", actions.onOpenNews))
         add(Item(Icons.Rounded.Tune, "Pengaturan", actions.onOpenSettings))
     }
-    Text("Menu kerja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Menu kerja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface)
+    val menuAccent = MaterialTheme.colorScheme.menuTitleAccent
     Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
         Column {
-            items.forEach { item -> DriverMenuRow(item.icon, item.title, onClick = item.action) }
+            items.forEach { item -> DriverMenuRow(item.icon, item.title, onClick = item.action, titleColor = menuAccent) }
         }
     }
 }

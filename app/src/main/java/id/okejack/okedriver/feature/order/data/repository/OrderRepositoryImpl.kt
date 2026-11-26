@@ -12,6 +12,7 @@ import id.okejack.okedriver.feature.order.data.remote.dto.EditShoppingItemReques
 import id.okejack.okedriver.feature.order.data.remote.dto.OrderResponseDto
 import id.okejack.okedriver.feature.order.data.remote.dto.OrdersListResponseDto
 import id.okejack.okedriver.feature.order.data.remote.dto.ShoppingItemDto
+import id.okejack.okedriver.feature.order.data.remote.dto.toSaveResult
 import id.okejack.okedriver.feature.order.data.remote.dto.toDomain
 import id.okejack.okedriver.feature.order.data.remote.dto.toCoordinateList
 import id.okejack.okedriver.feature.order.data.remote.dto.toMessageList
@@ -108,7 +109,7 @@ class OrderRepositoryImpl @Inject constructor(
     override suspend fun editShoppingItems(
         orderId: Long,
         items: List<EditableItem>
-    ): ApiResponse<DriverOrder> {
+    ): ApiResponse<Unit> {
         val apiToken = sessionDataStore.token.firstOrNull().orEmpty()
         if (apiToken.isBlank()) return ApiResponse.Error(401, "Session tidak valid")
 
@@ -126,13 +127,7 @@ class OrderRepositoryImpl @Inject constructor(
         )
 
         return when (val result = safeApiCall { api.editShoppingItems(orderId, body, apiToken) }) {
-            is ApiResponse.Success -> {
-                val dto = result.data
-                if (!dto.isSuccessful) return ApiResponse.Error(400, dto.errorMessage, errorCode = dto.error)
-                val order = dto.data?.order?.toDomain()
-                if (order != null) ApiResponse.Success(order)
-                else ApiResponse.Error(404, "Data order tidak ditemukan setelah update")
-            }
+            is ApiResponse.Success -> result.data.toSaveResult()
             is ApiResponse.Error -> result
             ApiResponse.Loading -> ApiResponse.Loading
         }

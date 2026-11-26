@@ -1,7 +1,6 @@
 package id.okejack.okedriver.feature.order.domain.usecase
 
 import id.okejack.okedriver.core.network.model.ApiResponse
-import id.okejack.okedriver.feature.order.domain.model.DriverOrder
 import id.okejack.okedriver.feature.order.domain.model.EditableItem
 import id.okejack.okedriver.feature.order.domain.repository.OrderRepository
 import javax.inject.Inject
@@ -12,5 +11,5 @@ class EditShoppingItemsUseCase @Inject constructor(
     suspend operator fun invoke(
         orderId: Long,
         items: List<EditableItem>
-    ): ApiResponse<DriverOrder> = repository.editShoppingItems(orderId, items)
+    ): ApiResponse<Unit> = repository.editShoppingItems(orderId, items)
 }

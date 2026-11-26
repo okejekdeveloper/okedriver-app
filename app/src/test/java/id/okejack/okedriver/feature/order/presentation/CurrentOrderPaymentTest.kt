@@ -184,9 +184,13 @@ private class FakeOrderRepository(order: DriverOrder) : OrderRepository {
     override suspend fun cancelCurrentOrder(reasonCode: Int) = ApiResponse.Success(Unit)
     override suspend fun getChatMessages(orderId: Long) = ApiResponse.Success(emptyList<ChatMessage>())
     override suspend fun submitChatMessage(orderId: Long, content: String) = ApiResponse.Success(emptyList<ChatMessage>())
-    override suspend fun editShoppingItems(orderId: Long, items: List<EditableItem>): ApiResponse<DriverOrder> {
+    override suspend fun editShoppingItems(orderId: Long, items: List<EditableItem>): ApiResponse<Unit> {
         editCalls++
-        return current
+        return when (val result = current) {
+            is ApiResponse.Success -> ApiResponse.Success(Unit)
+            is ApiResponse.Error -> result
+            ApiResponse.Loading -> ApiResponse.Loading
+        }
     }
     override suspend fun getRecentOrderLocations() = ApiResponse.Success(emptyList<OrderCoordinate>())
     override suspend fun generateOkeFastCode() = ApiResponse.Success("TEST")

@@ -19,7 +19,7 @@ interface OrderRepository {
     suspend fun cancelCurrentOrder(reasonCode: Int): ApiResponse<Unit>
     suspend fun getChatMessages(orderId: Long): ApiResponse<List<ChatMessage>>
     suspend fun submitChatMessage(orderId: Long, content: String): ApiResponse<List<ChatMessage>>
-    suspend fun editShoppingItems(orderId: Long, items: List<EditableItem>): ApiResponse<DriverOrder>
+    suspend fun editShoppingItems(orderId: Long, items: List<EditableItem>): ApiResponse<Unit>
     suspend fun getRecentOrderLocations(): ApiResponse<List<OrderCoordinate>>
     suspend fun generateOkeFastCode(): ApiResponse<String>
     suspend fun generateOrderQris(orderId: Long): ApiResponse<OrderQrisPayment>

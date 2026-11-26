@@ -47,8 +47,8 @@ android {
         applicationId = "id.okejack.okedriver"
         minSdk = 23
         targetSdk = 36
-        versionCode = 4866
-        versionName = "5.0.0"
+        versionCode = 4868
+        versionName = "5.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["googleMapsApiKey"] = localProperty("MAPS_API_KEY") ?: ""
@@ -84,6 +84,10 @@ android {
         compose = true
         buildConfig = true
     }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 val validateProductionConfig by tasks.registering {

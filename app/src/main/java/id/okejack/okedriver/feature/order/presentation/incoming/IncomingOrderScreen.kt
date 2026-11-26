@@ -22,6 +22,7 @@ import id.okejack.okedriver.core.common.CurrencyFormatter
 import id.okejack.okedriver.core.designsystem.component.*
 import id.okejack.okedriver.feature.order.domain.model.DriverOrder
 import id.okejack.okedriver.feature.order.presentation.components.OrderContent
+import id.okejack.okedriver.feature.order.presentation.components.formatOrderDistance
 import id.okejack.okedriver.core.designsystem.theme.LocalDriverUiStyle
 import id.okejack.okedriver.core.designsystem.theme.DriverUiStyle
 import id.okejack.okedriver.feature.order.presentation.dynamic.DynamicIncomingSummary
@@ -46,7 +47,6 @@ fun IncomingOrderScreen(orderId: Long, onClose: () -> Unit, onAccepted: (Long) -
     IncomingOrderContent(state.order, state.isLoading, state.errorMessage, state.isAccepting, state.isDeclining,
         ::requestClose, { viewModel.loadOrder() }, { viewModel.acceptOrder(onAccepted) }, { confirmDecline = true })
 }
-
 @Composable
 fun IncomingOrderContent(order: DriverOrder?, isLoading: Boolean, errorMessage: String?,
     isAccepting: Boolean, isDeclining: Boolean, onClose: () -> Unit,
@@ -79,7 +79,7 @@ fun IncomingOrderContent(order: DriverOrder?, isLoading: Boolean, errorMessage: 
                             Text("Total pembayaran pelanggan", style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(CurrencyFormatter.rupiah(order.totalPaid), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                            Text("${order.paymentProviderName.ifBlank { "Lihat detail pembayaran" }} · ${order.distanceLabel()}",
+                            Text("${order.paymentProviderName.ifBlank { "Lihat detail pembayaran" }} · ${formatOrderDistance(order.distance)}",
                                 style = MaterialTheme.typography.bodyLarge)
                         }
                         OrderContent(order, isCurrentOrder = false, showChatAction = false,
@@ -91,10 +91,4 @@ fun IncomingOrderContent(order: DriverOrder?, isLoading: Boolean, errorMessage: 
             }
         }
     }
-}
-
-private fun DriverOrder.distanceLabel(): String = when {
-    distance >= 1000 -> "%.1f km".format(java.util.Locale("id", "ID"), distance / 1000.0)
-    distance > 0 -> "$distance m"
-    else -> "Jarak belum tersedia"
 }
